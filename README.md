@@ -44,5 +44,62 @@ Hecho con Python, ANTLR4, FastAPI y CodeMirror.
 
 ## 🚀 Empezar
 
-Las instrucciones de instalación y uso se agregarán pronto.
+### Requisitos del sistema
+
+Estas herramientas no se instalan con pip:
+
+| Herramienta | Para qué | Instalación |
+| --- | --- | --- |
+| Python 3.12 | Todo el compilador | [uv](https://docs.astral.sh/uv/) lo descarga solo |
+| wabt | `wat2wasm` y `wasm-validate` | `sudo pacman -S wabt`, `sudo apt install wabt` o `brew install wabt` |
+| Java 11 o superior | Solo para regenerar la gramática con ANTLR | `sudo pacman -S jre-openjdk-headless` o `sudo apt install default-jre-headless` |
+
+### Instalación
+
+Con [uv](https://docs.astral.sh/uv/) (recomendado):
+
+```bash
+git clone <url-del-repo>
+cd rustiq-compiler
+uv sync
+source .venv/bin/activate      # en fish: source .venv/bin/activate.fish
+```
+
+Sin uv:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Verificar la instalación
+
+```bash
+wat2wasm --version
+wasm-validate --version
+python --version               # 3.12.x
+python -m pytest
+```
+
+### Regenerar la gramática
+
+Los archivos de ANTLR ya están en `rustiq/generated/`, así que Java solo hace falta si se edita `grammar/RustiQ.g4`:
+
+```bash
+antlr4 -v 4.13.2 -Dlanguage=Python3 -visitor -no-listener \
+  -o rustiq/generated grammar/RustiQ.g4
+```
+
+La versión de la herramienta debe coincidir con la del runtime (`antlr4-python3-runtime==4.13.2`).
+
+### Actualizar dependencias
+
+Se edita `pyproject.toml` (o `uv add <paquete>`) y se regenera el archivo para CI:
+
+```bash
+uv export --no-hashes -o requirements.txt
+```
+
+Se suben `pyproject.toml`, `uv.lock` y `requirements.txt` juntos.
 
