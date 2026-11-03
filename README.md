@@ -59,7 +59,7 @@ Estas herramientas no se instalan con pip:
 Con [uv](https://docs.astral.sh/uv/) (recomendado):
 
 ```bash
-git clone <url-del-repo>
+git clone https://github.com/yeraldsanchez/rustiq-compiler
 cd rustiq-compiler
 uv sync
 source .venv/bin/activate      # en fish: source .venv/bin/activate.fish
