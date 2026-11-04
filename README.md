@@ -51,8 +51,26 @@ Estas herramientas no se instalan con pip:
 | Herramienta | Para qué | Instalación |
 | --- | --- | --- |
 | Python 3.12 | Todo el compilador | [uv](https://docs.astral.sh/uv/) lo descarga solo |
-| wabt | `wat2wasm` y `wasm-validate` | `sudo pacman -S wabt`, `sudo apt install wabt` o `brew install wabt` |
-| Java 11 o superior | Solo para regenerar la gramática con ANTLR | `sudo pacman -S jre-openjdk-headless` o `sudo apt install default-jre-headless` |
+| wabt | `wat2wasm` y `wasm-validate` | Linux/macOS: `sudo pacman -S wabt`, `sudo apt install wabt` o `brew install wabt`. Windows: ver abajo |
+| Java 11 o superior | Solo para regenerar la gramática con ANTLR | Linux: `sudo pacman -S jre-openjdk-headless` o `sudo apt install default-jre-headless`. Windows: ver abajo |
+
+#### Windows
+
+wabt no tiene instalador oficial de Windows. Hay dos caminos:
+
+- **Scoop** (más simple): `scoop install wabt`
+- **Manual:** descargar el `.zip` de Windows desde [las releases de wabt](https://github.com/WebAssembly/wabt/releases), descomprimirlo (por ejemplo en `C:\tools\wabt`) y agregar su carpeta `bin` al `PATH`. Después se abre una terminal nueva.
+
+Para comprobar que quedó en el `PATH`:
+
+```powershell
+where.exe wat2wasm
+wat2wasm --version
+```
+
+Java (solo si se va a regenerar la gramática): `winget install EclipseAdoptium.Temurin.21.JRE`.
+
+uv: `winget install astral-sh.uv` o `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
 
 ### Instalación
 
@@ -65,6 +83,8 @@ uv sync
 source .venv/bin/activate      # en fish: source .venv/bin/activate.fish
 ```
 
+En Windows (PowerShell), el venv se activa con `.venv\Scripts\Activate.ps1`. Si PowerShell bloquea el script, se ejecuta una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. En `cmd` es `.venv\Scripts\activate.bat`.
+
 Sin uv:
 
 ```bash
@@ -72,6 +92,8 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+En Windows sin uv: `py -3.12 -m venv .venv`, se activa como arriba y luego `pip install -r requirements.txt`.
 
 ### Verificar la instalación
 
@@ -87,8 +109,7 @@ python -m pytest
 Los archivos de ANTLR ya están en `rustiq/generated/`, así que Java solo hace falta si se edita `grammar/RustiQ.g4`:
 
 ```bash
-antlr4 -v 4.13.2 -Dlanguage=Python3 -visitor -no-listener \
-  -o rustiq/generated grammar/RustiQ.g4
+antlr4 -v 4.13.2 -Dlanguage=Python3 -visitor -no-listener -o rustiq/generated grammar/RustiQ.g4
 ```
 
 La versión de la herramienta debe coincidir con la del runtime (`antlr4-python3-runtime==4.13.2`).
