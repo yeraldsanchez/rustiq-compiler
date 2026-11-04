@@ -217,16 +217,16 @@ Cada etapa termina con un entregable que se puede demostrar. Si una etapa se atr
 
 Juntos. Nadie empieza su carril hasta cerrar esto.
 
-- [ ] Crear repo, ramas protegidas y CI con un pytest vacío
+- [x] Crear repo, ramas protegidas y CI con un pytest vacío
 - [ ] Instalar ANTLR 4.13.2, wabt y wasmtime en ambas máquinas
-- [ ] Escribir los contratos 1 a 7 y el formato de pruebas
-- [ ] Esqueleto del `.g4` con todas las reglas y su dueño
-- [ ] Esqueleto de `analyzer.py` y `emitter.py` con los mixins vacíos
+- [x] Escribir los contratos 1 a 7 y el formato de pruebas
+- [x] Esqueleto del `.g4` con todas las reglas y su dueño
+- [x] Esqueleto de `analyzer.py` y `emitter.py` con los mixins vacíos
 - [ ] Escribir 10 programas de prueba válidos que cubran todo el lenguaje, sin salida esperada todavía
-- [ ] Escribir a mano un `hola.wat` que llame `print_i32`, convertirlo y ejecutarlo en wasmtime y en el navegador
-- [ ] Crear `docs/decisiones.md` con las decisiones asumidas
+- [x] Escribir a mano un `hola.wat` que llame `print_i32`, convertirlo y ejecutarlo en wasmtime y en el navegador
+- [x] Crear `docs/decisiones.md` con las decisiones asumidas
 
-- [ ] **Listo cuando:** CI pasa y `hola.wat` imprime en ambos runtimes.
+- [x] **Listo cuando:** CI pasa y `hola.wat` imprime en ambos runtimes.
 
 ### Etapa 1 · Parser y entorno de ejecución · jue 5 a dom 8 nov
 
