@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 rustiq/generated/*.interp
 rustiq/generated/*.tokens
+web/*.wasm
