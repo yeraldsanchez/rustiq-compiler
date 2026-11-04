@@ -109,7 +109,7 @@ python -m pytest
 Los archivos de ANTLR ya están en `rustiq/generated/`, así que Java solo hace falta si se edita `grammar/RustiQ.g4`:
 
 ```bash
-antlr4 -v 4.13.2 -Dlanguage=Python3 -visitor -no-listener -o rustiq/generated grammar/RustiQ.g4
+antlr4 -v 4.13.2 -Dlanguage=Python3 -visitor -no-listener -Xexact-output-dir -o rustiq/generated grammar/RustiQ.g4
 ```
 
 La versión de la herramienta debe coincidir con la del runtime (`antlr4-python3-runtime==4.13.2`).
