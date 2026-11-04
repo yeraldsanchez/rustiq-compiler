@@ -1,2 +1,5 @@
 .idea
 /docs/internal/
+.venv/
+__pycache__/
+.pytest_cache/
