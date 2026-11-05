@@ -1,6 +1,14 @@
-// Tuplas, f64, char, bool y patrón de tupla en match.
+// Tuplas (desestructuradas con match), f64, char, bool y patrón de tupla.
+fn suma_par(p: (i32, i32)) -> i32 {
+    match p {
+        (a, b) => a + b,
+    }
+}
+
 fn intercambiar(p: (i32, i32)) -> (i32, i32) {
-    (p.1, p.0)
+    match p {
+        (a, b) => (b, a),
+    }
 }
 
 fn promedio(a: f64, b: f64) -> f64 {
@@ -9,9 +17,10 @@ fn promedio(a: f64, b: f64) -> f64 {
 
 fn main() {
     let par: (i32, i32) = (3, 8);
-    let inv = intercambiar(par);
-    print_i32(inv.0);
-    print_i32(inv.1);
+    print_i32(suma_par(par));
+
+    let inv = intercambiar((3, 8));
+    print_i32(suma_par(inv));
 
     print_f64(promedio(2.5, 4.0));
 
@@ -21,8 +30,8 @@ fn main() {
     let mayor: bool = 3.5 > 1.25;
     print_bool(mayor);
 
-    let r: i32 = match (inv.0, mayor) {
-        (8, true) => 1,
+    let r: i32 = match (suma_par(inv), mayor) {
+        (11, true) => 1,
         (_, false) => 2,
         _ => 3,
     };
