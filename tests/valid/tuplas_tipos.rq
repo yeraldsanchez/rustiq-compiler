@@ -1,0 +1,30 @@
+// Tuplas, f64, char, bool y patrón de tupla en match.
+fn intercambiar(p: (i32, i32)) -> (i32, i32) {
+    (p.1, p.0)
+}
+
+fn promedio(a: f64, b: f64) -> f64 {
+    (a + b) / 2.0
+}
+
+fn main() {
+    let par: (i32, i32) = (3, 8);
+    let inv = intercambiar(par);
+    print_i32(inv.0);
+    print_i32(inv.1);
+
+    print_f64(promedio(2.5, 4.0));
+
+    let letra: char = 'R';
+    print_char(letra);
+
+    let mayor: bool = 3.5 > 1.25;
+    print_bool(mayor);
+
+    let r: i32 = match (inv.0, mayor) {
+        (8, true) => 1,
+        (_, false) => 2,
+        _ => 3,
+    };
+    print_i32(r);
+}
