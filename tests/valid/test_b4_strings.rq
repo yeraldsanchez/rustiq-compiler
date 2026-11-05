@@ -1,0 +1,4 @@
+fn main() {
+    let mensaje: String = "Hola compiladores";
+    print_str(mensaje);
+}

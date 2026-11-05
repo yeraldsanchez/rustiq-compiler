@@ -1,0 +1,7 @@
+fn main() {
+    let a: i32 = 10 + 5 * 2;
+    let b: bool = (a == 20) && !false;
+    let mut c: i32 = 5;
+    c += 3;
+    print_i32(c);
+}
