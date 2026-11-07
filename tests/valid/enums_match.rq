@@ -1,0 +1,44 @@
+// Enums con variantes unitarias y con datos, y match con comodín y literales.
+enum Forma {
+    Punto,
+    Cuadrado(i32),
+    Rectangulo(i32, i32),
+}
+
+enum Semaforo {
+    Rojo,
+    Amarillo,
+    Verde,
+}
+
+fn area(f: Forma) -> i32 {
+    match f {
+        Forma::Punto => 0,
+        Forma::Cuadrado(l) => l * l,
+        Forma::Rectangulo(a, b) => a * b,
+    }
+}
+
+fn segundos(s: Semaforo) -> i32 {
+    match s {
+        Semaforo::Rojo => 30,
+        Semaforo::Amarillo => 5,
+        Semaforo::Verde => 25,
+    }
+}
+
+fn nombre_dia(d: i32) -> i32 {
+    match d {
+        1 => 100,
+        2 => 200,
+        _ => 0,
+    }
+}
+
+fn main() {
+    print_i32(area(Forma::Punto));
+    print_i32(area(Forma::Cuadrado(7)));
+    print_i32(area(Forma::Rectangulo(3, 9)));
+    print_i32(segundos(Semaforo::Amarillo));
+    print_i32(nombre_dia(2) + nombre_dia(9));
+}

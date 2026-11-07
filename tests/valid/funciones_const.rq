@@ -1,0 +1,30 @@
+// Funciones: const global, recursión, return anticipado y composición de llamadas.
+const LIMITE: i32 = 5;
+
+fn factorial(n: i32) -> i32 {
+    if n <= 1 {
+        return 1;
+    }
+    n * factorial(n - 1)
+}
+
+fn fib(n: i32) -> i32 {
+    if n < 2 {
+        return n;
+    }
+    fib(n - 1) + fib(n - 2)
+}
+
+fn maximo(a: i32, b: i32) -> i32 {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
+fn main() {
+    print_i32(factorial(LIMITE));
+    print_i32(fib(10));
+    print_i32(maximo(factorial(4), fib(8)));
+}
