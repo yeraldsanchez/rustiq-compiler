@@ -5,6 +5,8 @@ reglas. Esta clase aporta lo común: el módulo, las líneas de salida y los
 imports del host (ABI en docs/memoria.md).
 """
 
+from pathlib import Path
+
 from rustiq.codegen.gen_arrays import ArraysGenMixin
 from rustiq.codegen.gen_control import ControlGenMixin
 from rustiq.codegen.gen_exprs import ExprsGenMixin
@@ -15,6 +17,9 @@ from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.semantic.info import SemanticInfo
 
 INDENT = "  "
+
+# Allocator y helpers de String que se pegan dentro de cada módulo.
+RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
 
 # (nombre, tipo Wasm del parámetro). Pendiente de aprobación del profesor (P1).
 HOST_IMPORTS = (
@@ -48,7 +53,9 @@ class Emitter(
         for name, wasm_type in HOST_IMPORTS:
             self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type})))')
         self.emit('(memory (export "memory") 1)')
-        self.visit(tree)  # TODO(A): runtime.wat, funciones y export de main
+        for line in RUNTIME_WAT.splitlines():
+            self.emit(line)
+        self.visit(tree)  # TODO(A): funciones y export de main
         self._depth -= 1
         self.emit(")")
         return "\n".join(self._lines) + "\n"
