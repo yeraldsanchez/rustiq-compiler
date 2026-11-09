@@ -89,6 +89,11 @@ class RustiQVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by RustiQParser#RefRefT.
+    def visitRefRefT(self, ctx:RustiQParser.RefRefTContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by RustiQParser#NamedT.
     def visitNamedT(self, ctx:RustiQParser.NamedTContext):
         return self.visitChildren(ctx)
