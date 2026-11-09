@@ -24,7 +24,7 @@ Con eso P2, P3, P4, P5, P6, P8 y P9 quedan con la opción por defecto, apegada a
 | P4 | `if` como expresión | Profesor | Solo sentencia | Resuelto | Solo sentencia |
 | P5 | `match` sin `;` en medio de un bloque | Profesor | Exigir `;` | Resuelto | Se exige `;` |
 | P6 | Patrones con números negativos | Profesor | No permitidos | Resuelto | No permitidos |
-| P7 | Identificadores que empiezan con `_` | Grupo | Seguir las reglas léxicas: pueden empezar con letra o `_` | Pendiente |  |
+| P7 | Identificadores que empiezan con `_` | Grupo | Seguir las reglas léxicas: pueden empezar con letra o `_` | Resuelto | Pueden empezar con letra o `_`. `_` solo es el comodín |
 | P8 | Conversión entre i32 y f64 | Profesor | No existe | Resuelto | No existe |
 | P9 | Operaciones sobre String | Profesor | Crear, mover, pasar, imprimir | Resuelto | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación |
 | P10 | Tipo `&&T` escrito sin espacio | Grupo | No soportado, se escribe `& &T` | Resuelto | Soportado en tipos. `&&x` en expresiones no existe |
@@ -159,7 +159,7 @@ match x { _ => 0 }  // _ solo siempre es comodín
 
 **Pregunta:** ¿cuál de las dos reglas vale?
 
-**Propuesta del grupo, sin cerrar:** seguir las reglas léxicas, que es lo que ya hace el lexer (`[a-zA-Z_] [a-zA-Z0-9_]*`). Un identificador puede empezar con letra o `_`, así que `_temp` es válido. `_` solo sigue siendo el comodín porque el token `UNDERSCORE` está definido antes que `IDENT`. No requiere cambios en el código.
+**Decisión del grupo:** seguir las reglas léxicas, que es lo que ya hace el lexer (`[a-zA-Z_] [a-zA-Z0-9_]*`). Un identificador puede empezar con letra o `_`, así que `_temp` es válido. `_` solo sigue siendo el comodín porque el token `UNDERSCORE` está definido antes que `IDENT`. No requiere cambios en el código.
 
 ### P8 · Conversión entre i32 y f64
 

@@ -26,3 +26,14 @@ def test_p10_and_logico_sigue_funcionando():
 def test_t3_doble_prestamo_en_expresion_no_es_valido():
     # unary acepta un solo prefijo, así que &&x no está en la EBNF.
     assert _errores_sintacticos("fn f() { let r = &&x; }") > 0
+
+
+@pytest.mark.parametrize("nombre", ["_temp", "_x1", "x_y"])
+def test_p7_identificadores_con_guion_bajo(nombre):
+    assert _errores_sintacticos(f"fn f() {{ let {nombre} = 5; }}") == 0
+
+
+def test_p7_guion_bajo_solo_es_comodin():
+    tokens = CommonTokenStream(RustiQLexer(InputStream("_")))
+    tokens.fill()
+    assert tokens.tokens[0].type == RustiQLexer.UNDERSCORE

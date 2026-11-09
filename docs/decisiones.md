@@ -25,7 +25,7 @@ Criterio del profesor (9 de noviembre de 2026): la gramática se sigue tal como 
 | P4 | `if` como expresión | Solo sentencia | confirmado |
 | P5 | `match` sin `;` en medio de un bloque | Se exige `;` | confirmado |
 | P6 | Patrones negativos | No permitidos | confirmado |
-| P7 | Identificadores con `_` inicial | Propuesta: seguir las reglas léxicas, como ya hace el lexer. Pueden empezar con letra o `_` (`_temp`). `_` solo es el comodín | pendiente |
+| P7 | Identificadores con `_` inicial | Se siguen las reglas léxicas, como ya hace el lexer. Pueden empezar con letra o `_` (`_temp`). `_` solo es el comodín | confirmado |
 | P8 | Conversión `i32` y `f64` | No existe | confirmado |
 | P9 | Operaciones sobre `String` | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación | confirmado |
 | P10 | `&&T` sin espacio | Soportado en tipos: `&&T` equivale a `& &T`. La EBNF ya lo permite | confirmado |
