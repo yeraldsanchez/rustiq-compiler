@@ -4,20 +4,30 @@ Nov 3, 2026 · @Yerald Sanchez
 
 Mientras un punto no se resuelva, el plan usa la opción por defecto indicada en cada uno. Conviene cerrar los de gramática antes del jueves 12 de noviembre, porque después afectan tipos y codegen al mismo tiempo.
 
+## Respuesta del profesor
+
+Nov 9, 2026.
+
+- Acepta las funciones `print_*` para la salida (P1).
+- Que la gramática sea más restrictiva que Rust no es un problema: la idea es justamente que RustiQ sea diferente de Rust. La gramática se sigue tal como está.
+- Solo se puede agregar algo que no esté en la gramática si se justifica que, sin eso, otra parte de la gramática no funcionaría.
+
+Con eso P2, P3, P4, P5, P6, P8 y P9 quedan con la opción por defecto, apegada a la gramática. P7 y P10 se deciden en el grupo usando el mismo criterio.
+
 ## Tablero
 
 | # | Punto | Consultar con | Opción por defecto | Estado | Decisión final |
 | --- | --- | --- | --- | --- | --- |
-| P1 | Funciones de salida `print_*` | Profesor | Usarlas | Sin preguntar |  |
-| P2 | Acceso a tuplas con `t.0` | Profesor | No existe, solo match | Sin preguntar |  |
-| P3 | Asignar con `*r = valor` | Profesor | No existe | Sin preguntar |  |
-| P4 | `if` como expresión | Profesor | Solo sentencia | Sin preguntar |  |
-| P5 | `match` sin `;` en medio de un bloque | Profesor | Exigir `;` | Sin preguntar |  |
-| P6 | Patrones con números negativos | Profesor | No permitidos | Sin preguntar |  |
-| P7 | Identificadores que empiezan con `_` | Profesor | No permitidos | Sin preguntar |  |
-| P8 | Conversión entre i32 y f64 | Profesor | No existe | Sin preguntar |  |
-| P9 | Operaciones sobre String | Profesor | Crear, mover, pasar, imprimir | Sin preguntar |  |
-| P10 | Tipo `&&T` escrito sin espacio | Profesor | No soportado, se escribe `& &T` | Sin preguntar |  |
+| P1 | Funciones de salida `print_*` | Profesor | Usarlas | Resuelto | Se usan las funciones `print_*` |
+| P2 | Acceso a tuplas con `t.0` | Profesor | No existe, solo match | Resuelto | No existe, las tuplas se leen con match |
+| P3 | Asignar con `*r = valor` | Profesor | No existe | Resuelto | No existe |
+| P4 | `if` como expresión | Profesor | Solo sentencia | Resuelto | Solo sentencia |
+| P5 | `match` sin `;` en medio de un bloque | Profesor | Exigir `;` | Resuelto | Se exige `;` |
+| P6 | Patrones con números negativos | Profesor | No permitidos | Resuelto | No permitidos |
+| P7 | Identificadores que empiezan con `_` | Grupo | Seguir las reglas léxicas: pueden empezar con letra o `_` | Pendiente |  |
+| P8 | Conversión entre i32 y f64 | Profesor | No existe | Resuelto | No existe |
+| P9 | Operaciones sobre String | Profesor | Crear, mover, pasar, imprimir | Resuelto | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación |
+| P10 | Tipo `&&T` escrito sin espacio | Grupo | No soportado, se escribe `& &T` | Resuelto | Soportado en tipos. `&&x` en expresiones no existe |
 | G1 | Qué tipos son Copy | Grupo | Regla de Rust | Sin preguntar |  |
 | G2 | Sombreado en el mismo ámbito | Grupo | Prohibido, solo en ámbitos internos | Sin preguntar |  |
 | G3 | Manejo de memoria | Grupo | Bump allocator sin liberar | Sin preguntar |  |
@@ -42,6 +52,8 @@ fn main() {
 
 **Pregunta:** ¿acepta estas funciones builtin, o espera otra forma de mostrar resultados?
 
+**Respuesta:** las acepta.
+
 ### P2 · Acceso a elementos de tupla
 
 **De dónde sale:** `fieldSuffix = "." identifier`. Después del punto solo cabe un identificador, no un número.
@@ -58,6 +70,8 @@ let a = match d { (x, _) => x };   // única forma válida
 **Detalle técnico si se agrega:** el lexer lee `d.0.1` como `d`, `.` y el float `0.1`. Hay que manejarlo.
 
 **Pregunta:** ¿agregamos `t.0` o las tuplas solo se leen con match?
+
+**Respuesta:** se sigue la gramática. Las tuplas solo se leen con match.
 
 ### P3 · Asignar a través de una referencia
 
@@ -79,6 +93,8 @@ Con esto `&mut` solo sirve para structs y arrays, no para escalares.
 
 **Pregunta:** ¿agregamos `*` al place?
 
+**Respuesta:** se sigue la gramática. `*r = valor` no existe.
+
 ### P4 · `if` como expresión
 
 **De dónde sale:** `ifStmt` aparece en `statement`. En `primary` están `matchExpr` y `block`, pero no `if`.
@@ -91,6 +107,8 @@ let x = if c { 1 } else { 2 };               // inválido con la EBNF
 ```
 
 **Pregunta:** ¿`if` debe poder usarse como expresión?
+
+**Respuesta:** se sigue la gramática. `if` es solo sentencia.
 
 ### P5 · `match` como sentencia sin punto y coma
 
@@ -110,6 +128,8 @@ fn main() {
 
 **Pregunta:** ¿se exige `;` o se permite omitirlo como en Rust?
 
+**Respuesta:** se sigue la gramática. Se exige `;`.
+
 ### P6 · Patrones con números negativos
 
 **De dónde sale:** `pattern` usa `literal`, y `integerLiteral = digit { digit }` no tiene signo. El signo es un operador unario de expresiones.
@@ -124,6 +144,8 @@ match codigo {
 
 **Pregunta:** ¿se permiten patrones negativos?
 
+**Respuesta:** se sigue la gramática. No se permiten.
+
 ### P7 · Identificadores con guion bajo inicial
 
 **De dónde sale:** la EBNF dice `identifier = letter { letter | digit | "_" }`. Las reglas léxicas dicen que empiezan con letra o guion bajo. Se contradicen.
@@ -137,6 +159,8 @@ match x { _ => 0 }  // _ solo siempre es comodín
 
 **Pregunta:** ¿cuál de las dos reglas vale?
 
+**Propuesta del grupo, sin cerrar:** seguir las reglas léxicas, que es lo que ya hace el lexer (`[a-zA-Z_] [a-zA-Z0-9_]*`). Un identificador puede empezar con letra o `_`, así que `_temp` es válido. `_` solo sigue siendo el comodín porque el token `UNDERSCORE` está definido antes que `IDENT`. No requiere cambios en el código.
+
 ### P8 · Conversión entre i32 y f64
 
 **De dónde sale:** no existe `as` ni ninguna función de conversión. Los dos tipos numéricos quedan aislados.
@@ -148,6 +172,8 @@ let x: f64 = n as f64;      // as no existe
 ```
 
 **Pregunta:** ¿se deja así, o se agrega `as` o un builtin como `to_f64`?
+
+**Respuesta:** se sigue la gramática. No hay conversión.
 
 ### P9 · Operaciones sobre String
 
@@ -163,6 +189,8 @@ let d = b == "hola";     // ¿válido?
 ```
 
 **Pregunta:** ¿basta con crear, mover, pasar, retornar e imprimir, o espera concatenación y comparación?
+
+**Respuesta:** se sigue la gramática. Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación.
 
 ### P10 · Tipo referencia a referencia `&&T`
 
@@ -180,6 +208,10 @@ Es el mismo problema que T3 tiene en expresiones (`&&x`).
 **Detalle técnico si se soporta:** agregar a `type` la alternativa `"&&" [ "mut" ] type`, que se lee como `& (& [mut] T)`, y regenerar el parser. No cambia el lexer.
 
 **Pregunta:** ¿hace falta soportar `&&T` sin espacio, o basta con documentarlo como no soportado?
+
+**Decisión del grupo:** se soporta en tipos. La EBNF ya permite `&&i32` porque `referenceType` es recursivo, así que no se agrega nada nuevo: solo se hace que el parser acepte lo que la gramática ya dice, lo que cumple el criterio del profesor. Se agregó la alternativa `AND MUT? type` (`RefRefT`) a `type`, que equivale a `& (& [mut] T)`.
+
+En expresiones es distinto: `unary` acepta un solo prefijo, así que `&&x` ni `& &x` son válidos según la EBNF. Un valor de tipo `&&T` se crea pasando por una variable (`let r = &x; let rr = &r;`) y se lee con `*(*rr)`.
 
 ## Decisiones del grupo
 
@@ -270,7 +302,7 @@ Con `memory.grow` el riesgo del bump se reduce mucho para programas de prueba.
 
 ### G4 · Alcance de String
 
-Depende de la respuesta a P9. Si el profesor no pide más, la opción por defecto es: literal, move, pasar como argumento, retornar e imprimir. Concatenar con `+` requiere pedir memoria nueva y copiar bytes. Comparar con `==` requiere recorrer ambos strings. Los dos son trabajo extra de B en la etapa 3.
+Resuelto con P9: se sigue la gramática. Literal, move, pasar como argumento, retornar e imprimir. Concatenar con `+` requiere pedir memoria nueva y copiar bytes. Comparar con `==` requiere recorrer ambos strings. Los dos son trabajo extra de B en la etapa 3.
 
 ## Ajustes técnicos de ANTLR
 
@@ -312,7 +344,7 @@ let c = (x < y) == ok;  // válido con paréntesis
 let r = &&x;    // referencia a una referencia
 ```
 
-**Solución:** en `unary`, aceptar el token `&&` y tratarlo como dos préstamos. Es un caso raro. Si no hay tiempo, se documenta como no soportado. El mismo problema en tipos (`&&i32`) está en P10.
+**Solución:** no se soporta. `unary` acepta un solo prefijo, así que la EBNF tampoco permite `& &x`. El error sintáctico coincide con la gramática. El caso de tipos (`&&i32`) sí está en la EBNF y se resolvió en P10.
 
 ### T4 · `let` sin inicializador
 

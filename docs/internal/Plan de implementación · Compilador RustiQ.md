@@ -291,7 +291,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **B**
 
-- [ ] Strings: literales en el segmento de datos, `print_str` y las operaciones que se decidan en P9
+- [ ] Strings: literales en el segmento de datos, `print_str`, move, paso y retorno. Sin concatenación ni comparación (P9)
 - [ ] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen
 - [ ] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
 - [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
