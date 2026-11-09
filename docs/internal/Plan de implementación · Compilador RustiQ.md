@@ -232,11 +232,11 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **A**
 
-- [ ] Reglas del `.g4`: `functionDecl`, `structDecl`, `enumDecl`, `constDecl`, `type` y `pattern`
-- [ ] `runtime.wat`: bump allocator, `alloc`, `memcpy`, creación de String
-- [ ] `pipeline.py`: WAT a .wasm con wat2wasm, validación con wasm-validate, errores de backend como `CompileError`
-- [ ] Runner de pruebas que lee `.out` y la cabecera `// ERROR`
-- [ ] FastAPI con `/compile` que por ahora solo parsea y devuelve errores
+- [x] Reglas del `.g4`: `functionDecl`, `structDecl`, `enumDecl`, `constDecl`, `type` y `pattern`
+- [x] `runtime.wat`: bump allocator, `alloc`, `memcpy`, creación de String
+- [x] `pipeline.py`: WAT a .wasm con wat2wasm, validación con wasm-validate, errores de backend como `CompileError`
+- [x] Runner de pruebas que lee `.out` y la cabecera `// ERROR`
+- [x] FastAPI con `/compile` que por ahora solo parsea y devuelve errores
 
 **B**
 

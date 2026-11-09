@@ -17,6 +17,7 @@ Mientras un punto no se resuelva, el plan usa la opción por defecto indicada en
 | P7 | Identificadores que empiezan con `_` | Profesor | No permitidos | Sin preguntar |  |
 | P8 | Conversión entre i32 y f64 | Profesor | No existe | Sin preguntar |  |
 | P9 | Operaciones sobre String | Profesor | Crear, mover, pasar, imprimir | Sin preguntar |  |
+| P10 | Tipo `&&T` escrito sin espacio | Profesor | No soportado, se escribe `& &T` | Sin preguntar |  |
 | G1 | Qué tipos son Copy | Grupo | Regla de Rust | Sin preguntar |  |
 | G2 | Sombreado en el mismo ámbito | Grupo | Prohibido, solo en ámbitos internos | Sin preguntar |  |
 | G3 | Manejo de memoria | Grupo | Bump allocator sin liberar | Sin preguntar |  |
@@ -163,6 +164,23 @@ let d = b == "hola";     // ¿válido?
 
 **Pregunta:** ¿basta con crear, mover, pasar, retornar e imprimir, o espera concatenación y comparación?
 
+### P10 · Tipo referencia a referencia `&&T`
+
+**De dónde sale:** `referenceType = "&" [ "mut" ] type`. Como `type` puede ser otra referencia, la EBNF acepta `&&i32` y `&&mut i32`.
+
+**Problema:** el lexer toma siempre el token más largo, así que `&&` se lee como el operador lógico `AND` y no como dos `&`. Con el `.g4` actual:
+
+```rust
+fn f(r: & &i32) {}    // válido: dos tokens &
+fn f(r: &&i32) {}     // error sintáctico, aunque la EBNF lo permite
+```
+
+Es el mismo problema que T3 tiene en expresiones (`&&x`).
+
+**Detalle técnico si se soporta:** agregar a `type` la alternativa `"&&" [ "mut" ] type`, que se lee como `& (& [mut] T)`, y regenerar el parser. No cambia el lexer.
+
+**Pregunta:** ¿hace falta soportar `&&T` sin espacio, o basta con documentarlo como no soportado?
+
 ## Decisiones del grupo
 
 El enunciado deja estas decisiones abiertas. Se pueden tomar sin consultar, siempre que se documenten y se expliquen en la defensa.
@@ -294,7 +312,7 @@ let c = (x < y) == ok;  // válido con paréntesis
 let r = &&x;    // referencia a una referencia
 ```
 
-**Solución:** en `unary`, aceptar el token `&&` y tratarlo como dos préstamos. Es un caso raro. Si no hay tiempo, se documenta como no soportado.
+**Solución:** en `unary`, aceptar el token `&&` y tratarlo como dos préstamos. Es un caso raro. Si no hay tiempo, se documenta como no soportado. El mismo problema en tipos (`&&i32`) está en P10.
 
 ### T4 · `let` sin inicializador
 
