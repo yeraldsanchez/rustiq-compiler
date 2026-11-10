@@ -87,12 +87,14 @@ typeList
 
 // Dueño: A (Yerald)
 type
-    : primitiveType                                        # PrimitiveT
-    | STRING_TYPE                                          # StringT
-    | LBRACK type SEMI INT_LIT RBRACK                      # ArrayT
-    | LPAREN type (COMMA type)+ COMMA? RPAREN              # TupleT
-    | AMP MUT? type                                        # RefT
-    | IDENT                                                # NamedT
+    : primitiveType                                       # PrimitiveT
+    | STRING_TYPE                                         # StringT
+    | LBRACK type SEMI INT_LIT RBRACK                     # ArrayT
+    | LPAREN type (COMMA type)+ COMMA? RPAREN             # TupleT
+    | AMP MUT? type                                       # RefT
+    // El lexer lee "&&" como AND; aquí equivale a & (& [mut] type). Ver P10.
+    | AND MUT? type                                       # RefRefT
+    | IDENT                                               # NamedT
     ;
 
 // Dueño: A (Yerald)

@@ -26,14 +26,15 @@ Wasm solo maneja números (`i32`, `f64`). Todo valor compuesto vive en la memori
 - Si el heap se agota, se llama a `memory.grow`.
 - No se libera memoria. Un loop que cree muchos `String` consume heap sin recuperarlo.
 
-```wat
-(global $heap (mut i32) (i32.const 1024))
-(func $alloc (param $n i32) (result i32)
-  (local $p i32)
-  (local.set $p (global.get $heap))
-  (global.set $heap (i32.add (global.get $heap) (local.get $n)))
-  (local.get $p))
-```
+Implementación en `rustiq/codegen/runtime.wat`. El Emitter la pega dentro de cada módulo:
+
+| Función | Qué hace |
+| --- | --- |
+| `$alloc(n) -> ptr` | Reserva `n` bytes redondeados a múltiplo de 8, así todo bloque queda alineado a 8. Si no cabe, llama a `memory.grow` con las páginas que falten. Si el grow falla, `unreachable` |
+| `$memcpy(dst, src, n)` | Copia `n` bytes hacia adelante, byte por byte |
+| `$str_new(src, len) -> ptr` | Crea `[len][bytes]` en el heap copiando `len` bytes desde `src` (un literal de la zona estática) |
+| `$str_len(s)` | Lee el largo en bytes |
+| `$str_data(s)` | Devuelve `s + 4`, la dirección del primer byte |
 
 ## ABI del módulo
 
@@ -44,4 +45,4 @@ Wasm solo maneja números (`i32`, `f64`). Todo valor compuesto vive en la memori
 ## Pendiente
 
 - Tamaño exacto del relleno del enum y alineación del payload.
-- Cómo se copian arrays y tuplas `Copy` (`memcpy`).
+- Si los literales de String superan los 1024 bytes, el inicio del heap tiene que moverse.
