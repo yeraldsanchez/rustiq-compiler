@@ -3,11 +3,11 @@ grammar RustiQ;
 // Version estricta: sigue el EBNF del documento.
 // Unicas adiciones: EOF, la regla condition y el predicado de struct literal.
 // Generar con:
-//   antlr4 -Dlanguage=Python3 -visitor -no-listener RustiQ.g4
+//    antlr4 -Dlanguage=Python3 -visitor -no-listener RustiQ.g4
 
 // Dueños de las reglas (ver plan de implementación):
-//   A = Yerald: items, tipos, patrones, match, structs, enums y tuplas
-//   B = Byron:  léxico, sentencias, expresiones, place, arrays
+//    A = Yerald: items, tipos, patrones, match, structs, enums y tuplas
+//    B = Byron:  léxico, sentencias, expresiones, place, arrays
 // Cada quien edita solo sus reglas. Si una regla ajena necesita cambio, se avisa.
 
 @parser::members {
@@ -87,12 +87,12 @@ typeList
 
 // Dueño: A (Yerald)
 type
-    : primitiveType                                       # PrimitiveT
-    | STRING_TYPE                                         # StringT
-    | LBRACK type SEMI INT_LIT RBRACK                     # ArrayT
-    | LPAREN type (COMMA type)+ COMMA? RPAREN             # TupleT
-    | AMP MUT? type                                       # RefT
-    | IDENT                                               # NamedT
+    : primitiveType                                        # PrimitiveT
+    | STRING_TYPE                                          # StringT
+    | LBRACK type SEMI INT_LIT RBRACK                      # ArrayT
+    | LPAREN type (COMMA type)+ COMMA? RPAREN              # TupleT
+    | AMP MUT? type                                        # RefT
+    | IDENT                                                # NamedT
     ;
 
 // Dueño: A (Yerald)
@@ -303,10 +303,10 @@ matchArm
 
 // Dueño: A (Yerald)
 pattern
-    : UNDERSCORE                                              # WildcardPat
-    | literal                                                 # LiteralPat
+    : UNDERSCORE                                               # WildcardPat
+    | literal                                                  # LiteralPat
     | IDENT COLONCOLON IDENT (LPAREN patternList RPAREN)?     # EnumPat
-    | IDENT                                                   # BindingPat
+    | IDENT                                                    # BindingPat
     | LPAREN pattern (COMMA pattern)+ COMMA? RPAREN           # TuplePat
     ;
 
