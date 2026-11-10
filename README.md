@@ -104,6 +104,14 @@ python --version               # 3.12.x
 python -m pytest
 ```
 
+### Levantar el servidor
+
+```bash
+uvicorn server.app:app --reload
+```
+
+La API queda en `POST http://localhost:8000/compile` y la carpeta `web/` se sirve en `http://localhost:8000/`. La documentación interactiva está en `/docs`.
+
 ### Regenerar la gramática
 
 Los archivos de ANTLR ya están en `rustiq/generated/`, así que Java solo hace falta si se edita `grammar/RustiQ.g4`:

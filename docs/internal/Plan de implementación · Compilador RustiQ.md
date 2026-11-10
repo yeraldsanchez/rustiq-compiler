@@ -21,19 +21,19 @@ Los puntos sin resolver están en un documento aparte. El plan asume la gramáti
 
 Versiones fijadas en `requirements.txt` para que ambas máquinas y CI den el mismo resultado.
 
-| Pieza | Herramienta | Uso |
-| --- | --- | --- |
-| Lenguaje | Python 3.11 o superior | Todo el compilador |
-| Parser | ANTLR4 4.13.2 con `antlr4-tools` y `antlr4-python3-runtime` 4.13.2 | Lexer y parser con destino Python. Herramienta y runtime en la misma versión |
-| Salida del backend | WAT generado como texto desde Python | Legible y fácil de mostrar en la defensa |
-| Conversión y validación | wabt: `wat2wasm` y `wasm-validate` | Evidencia oficial de módulo válido |
-| Respaldo de conversión | `wasmtime.wat2wasm` | Si wabt falla en alguna máquina |
-| Runtime de pruebas | `wasmtime` para Python | Ejecuta los .wasm dentro de pytest y en CI |
-| Runtime del editor | API `WebAssembly` del navegador | Ejecuta el módulo recién compilado |
-| Servidor | FastAPI con uvicorn | Endpoint de compilación |
-| Editor | CodeMirror 6 | Números de línea, resaltado y marcas de error |
-| Pruebas | pytest | Regresión válida e inválida |
-| CI | GitHub Actions | Corre pytest en cada push |
+| Pieza                   | Herramienta                                                        | Uso                                                                          |
+|-------------------------|--------------------------------------------------------------------|------------------------------------------------------------------------------|
+| Lenguaje                | Python 3.11 o superior                                             | Todo el compilador                                                           |
+| Parser                  | ANTLR4 4.13.2 con `antlr4-tools` y `antlr4-python3-runtime` 4.13.2 | Lexer y parser con destino Python. Herramienta y runtime en la misma versión |
+| Salida del backend      | WAT generado como texto desde Python                               | Legible y fácil de mostrar en la defensa                                     |
+| Conversión y validación | wabt: `wat2wasm` y `wasm-validate`                                 | Evidencia oficial de módulo válido                                           |
+| Respaldo de conversión  | `wasmtime.wat2wasm`                                                | Si wabt falla en alguna máquina                                              |
+| Runtime de pruebas      | `wasmtime` para Python                                             | Ejecuta los .wasm dentro de pytest y en CI                                   |
+| Runtime del editor      | API `WebAssembly` del navegador                                    | Ejecuta el módulo recién compilado                                           |
+| Servidor                | FastAPI con uvicorn                                                | Endpoint de compilación                                                      |
+| Editor                  | CodeMirror 6                                                       | Números de línea, resaltado y marcas de error                                |
+| Pruebas                 | pytest                                                             | Regresión válida e inválida                                                  |
+| CI                      | GitHub Actions                                                     | Corre pytest en cada push                                                    |
 
 Los archivos generados por ANTLR se suben al repo. Así nadie necesita Java para compilar, solo para regenerar la gramática.
 
@@ -161,16 +161,16 @@ class Symbol:
 
 Propuesta inicial. A la puede ajustar, pero se documenta antes de cambiarla.
 
-| Tipo | Representación en Wasm |
-| --- | --- |
-| i32, bool, char | `i32` en local |
-| f64 | `f64` en local |
-| String | puntero a `[len: i32][bytes UTF-8]` |
-| Struct, tupla | puntero a campos en orden, cada uno en una ranura de 8 bytes |
-| Array | puntero a `n` ranuras de 8 bytes |
-| Enum | puntero a `[tag: i32][relleno][payload en ranuras de 8 bytes]` |
-| Referencia | `i32` con la dirección |
-| Escalar con `&` aplicado | vive en una celda del heap, el local guarda su dirección |
+| Tipo                     | Representación en Wasm                                         |
+|--------------------------|----------------------------------------------------------------|
+| i32, bool, char          | `i32` en local                                                 |
+| f64                      | `f64` en local                                                 |
+| String                   | puntero a `[len: i32][bytes UTF-8]`                            |
+| Struct, tupla            | puntero a campos en orden, cada uno en una ranura de 8 bytes   |
+| Array                    | puntero a `n` ranuras de 8 bytes                               |
+| Enum                     | puntero a `[tag: i32][relleno][payload en ranuras de 8 bytes]` |
+| Referencia               | `i32` con la dirección                                         |
+| Escalar con `&` aplicado | vive en una celda del heap, el local guarda su dirección       |
 
 Heap con bump allocator desde la dirección 1024. Un global `$heap` que solo avanza y usa `memory.grow` si se acaba.
 
@@ -218,11 +218,11 @@ Cada etapa termina con un entregable que se puede demostrar. Si una etapa se atr
 Juntos. Nadie empieza su carril hasta cerrar esto.
 
 - [x] Crear repo, ramas protegidas y CI con un pytest vacío
-- [ ] Instalar ANTLR 4.13.2, wabt y wasmtime en ambas máquinas
+- [x] Instalar ANTLR 4.13.2, wabt y wasmtime en ambas máquinas
 - [x] Escribir los contratos 1 a 7 y el formato de pruebas
 - [x] Esqueleto del `.g4` con todas las reglas y su dueño
 - [x] Esqueleto de `analyzer.py` y `emitter.py` con los mixins vacíos
-- [ ] Escribir 10 programas de prueba válidos que cubran todo el lenguaje, sin salida esperada todavía
+- [x] Escribir 10 programas de prueba válidos que cubran todo el lenguaje, sin salida esperada todavía
 - [x] Escribir a mano un `hola.wat` que llame `print_i32`, convertirlo y ejecutarlo en wasmtime y en el navegador
 - [x] Crear `docs/decisiones.md` con las decisiones asumidas
 
@@ -232,11 +232,11 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **A**
 
-- [ ] Reglas del `.g4`: `functionDecl`, `structDecl`, `enumDecl`, `constDecl`, `type` y `pattern`
-- [ ] `runtime.wat`: bump allocator, `alloc`, `memcpy`, creación de String
-- [ ] `pipeline.py`: WAT a .wasm con wat2wasm, validación con wasm-validate, errores de backend como `CompileError`
-- [ ] Runner de pruebas que lee `.out` y la cabecera `// ERROR`
-- [ ] FastAPI con `/compile` que por ahora solo parsea y devuelve errores
+- [x] Reglas del `.g4`: `functionDecl`, `structDecl`, `enumDecl`, `constDecl`, `type` y `pattern`
+- [x] `runtime.wat`: bump allocator, `alloc`, `memcpy`, creación de String
+- [x] `pipeline.py`: WAT a .wasm con wat2wasm, validación con wasm-validate, errores de backend como `CompileError`
+- [x] Runner de pruebas que lee `.out` y la cabecera `// ERROR`
+- [x] FastAPI con `/compile` que por ahora solo parsea y devuelve errores
 
 **B**
 
@@ -291,7 +291,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **B**
 
-- [ ] Strings: literales en el segmento de datos, `print_str` y las operaciones que se decidan en P9
+- [ ] Strings: literales en el segmento de datos, `print_str`, move, paso y retorno. Sin concatenación ni comparación (P9)
 - [ ] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen
 - [ ] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
 - [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
@@ -330,15 +330,15 @@ A y B corren en paralelo. Cada sincronización es una prueba concreta que ambos 
 
 Meta al congelamiento: 30 programas válidos y 40 inválidos, todos en CI.
 
-| Grupo | Válidos | Inválidos | Dueño |
-| --- | --- | --- | --- |
-| Léxico y sintaxis | 3 | 8 | B |
-| Ámbitos y declaraciones | 3 | 4 | B |
-| Funciones y control de flujo | 6 | 6 | A |
-| Operadores, inferencia, mutabilidad | 4 | 5 | B |
-| Structs, tuplas, enums, match | 8 | 6 | A |
-| Movimientos | 2 | 6 | A |
-| Arrays, Strings, referencias, préstamos | 4 | 5 | B |
+| Grupo                                   | Válidos | Inválidos | Dueño |
+|-----------------------------------------|---------|-----------|-------|
+| Léxico y sintaxis                       | 3       | 8         | B     |
+| Ámbitos y declaraciones                 | 3       | 4         | B     |
+| Funciones y control de flujo            | 6       | 6         | A     |
+| Operadores, inferencia, mutabilidad     | 4       | 5         | B     |
+| Structs, tuplas, enums, match           | 8       | 6         | A     |
+| Movimientos                             | 2       | 6         | A     |
+| Arrays, Strings, referencias, préstamos | 4       | 5         | B     |
 
 Una tarea está terminada cuando:
 
@@ -352,15 +352,15 @@ Una tarea está terminada cuando:
 
 Si algo se atrasa más de un día, se aplica el recorte en vez de empujar la fecha.
 
-| Riesgo | Señal | Recorte |
-| --- | --- | --- |
-| La gramática se atrasa | El vie 6 el .g4 unido no parsea los 10 programas | Cada uno arranca la etapa 2 con lo que ya parsea: funciones, i32, if, while. La gramática restante se termina en paralelo |
-| El profesor cambia la gramática | Respuesta a los puntos pendientes | Cada extensión es una regla nueva en el .g4. Se regenera y se agrega un caso al typecheck y al codegen |
-| Ownership en ramas y loops es complejo | El mié 18 fallan los inválidos de ramas | Tratar todo movimiento condicional como movimiento definitivo. Es más estricto que Rust, se documenta |
-| Lifetime de préstamos | Casos difíciles con préstamos que cruzan bloques | Préstamo activo hasta el final del ámbito léxico donde se creó. Sin análisis de último uso |
-| Match con patrones anidados | El codegen se complica | Soportar un solo nivel de anidación y documentarlo como limitación |
-| Memoria del bump allocator | Programas con loops que crean String | `memory.grow` y documentar que no se libera memoria |
-| wabt no instala en alguna máquina | Error en etapa 0 | Usar `wasmtime.wat2wasm` como conversor |
-| Uno de los dos se enferma o se atrasa | Una sincronización no se cumple | El otro toma las tareas pendientes. Posible por la revisión cruzada de PR |
+| Riesgo                                 | Señal                                            | Recorte                                                                                                                   |
+|----------------------------------------|--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| La gramática se atrasa                 | El vie 6 el .g4 unido no parsea los 10 programas | Cada uno arranca la etapa 2 con lo que ya parsea: funciones, i32, if, while. La gramática restante se termina en paralelo |
+| El profesor cambia la gramática        | Respuesta a los puntos pendientes                | Cada extensión es una regla nueva en el .g4. Se regenera y se agrega un caso al typecheck y al codegen                    |
+| Ownership en ramas y loops es complejo | El mié 18 fallan los inválidos de ramas          | Tratar todo movimiento condicional como movimiento definitivo. Es más estricto que Rust, se documenta                     |
+| Lifetime de préstamos                  | Casos difíciles con préstamos que cruzan bloques | Préstamo activo hasta el final del ámbito léxico donde se creó. Sin análisis de último uso                                |
+| Match con patrones anidados            | El codegen se complica                           | Soportar un solo nivel de anidación y documentarlo como limitación                                                        |
+| Memoria del bump allocator             | Programas con loops que crean String             | `memory.grow` y documentar que no se libera memoria                                                                       |
+| wabt no instala en alguna máquina      | Error en etapa 0                                 | Usar `wasmtime.wat2wasm` como conversor                                                                                   |
+| Uno de los dos se enferma o se atrasa  | Una sincronización no se cumple                  | El otro toma las tareas pendientes. Posible por la revisión cruzada de PR                                                 |
 
 Orden de recorte si falta tiempo al final: resaltado de sintaxis, chequeo de límites de arrays, patrones anidados, copia de arrays Copy. Nunca se recorta validación ni ejecución real del .wasm.
