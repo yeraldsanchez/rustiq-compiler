@@ -17,10 +17,9 @@ fn fib(n: i32) -> i32 {
 
 fn maximo(a: i32, b: i32) -> i32 {
     if a > b {
-        a
-    } else {
-        b
+        return a;
     }
+    b
 }
 
 fn main() {
