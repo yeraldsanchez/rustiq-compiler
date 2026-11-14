@@ -1,0 +1,4 @@
+// ERROR semantico E_REDECLARED 3:8
+struct S { a: i32 }
+struct S { b: i32 }
+fn main() {}

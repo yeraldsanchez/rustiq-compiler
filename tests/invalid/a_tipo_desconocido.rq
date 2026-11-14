@@ -1,0 +1,3 @@
+// ERROR semantico E_UNKNOWN_TYPE 2:17
+fn f(a: i32, b: Fantasma) {}
+fn main() {}

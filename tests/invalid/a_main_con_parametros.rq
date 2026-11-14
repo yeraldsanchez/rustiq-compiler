@@ -1,0 +1,2 @@
+// ERROR semantico E_BAD_MAIN 2:4
+fn main(argumento: i32) {}

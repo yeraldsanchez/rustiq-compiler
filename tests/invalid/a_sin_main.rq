@@ -1,0 +1,2 @@
+// ERROR semantico E_BAD_MAIN 2:1
+fn auxiliar() {}

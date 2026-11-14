@@ -1,0 +1,4 @@
+// ERROR semantico E_BREAK_OUTSIDE_LOOP 3:5
+fn main() {
+    break;
+}

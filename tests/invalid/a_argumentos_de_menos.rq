@@ -1,0 +1,5 @@
+// ERROR semantico E_ARG_COUNT 5:13
+fn suma(a: i32, b: i32) -> i32 {
+    a + b
+}
+fn main() { suma(1); }
