@@ -1,9 +1,87 @@
-"""Generación de código de control de flujo.
+"""Generación de código de control de flujo y bloques.
 
 Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
 nunca vuelve a inferir tipos.
+
+Un bloque no abre un `block` de Wasm: sus sentencias se emiten en secuencia y la
+expresión final deja su valor en la pila. Los ciclos usan `block` + `loop` con
+etiquetas con nombre, así `break` y `continue` saltan al ciclo correcto sin
+contar profundidades.
 """
+
+from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.types import UNIT
 
 
 class ControlGenMixin:
-    pass
+    def visitBlock(self, ctx: RustiQParser.BlockContext):
+        for statement in ctx.statement():
+            self.visit(statement)
+        if ctx.expression() is not None:
+            self.visit(ctx.expression())
+
+    def visitExprStmt(self, ctx: RustiQParser.ExprStmtContext):
+        self.visit(ctx.expression())
+        produced = self.info.expr_type.get(ctx.expression())
+        if produced is not None and produced != UNIT:
+            self.emit("drop")  # el valor de una sentencia no se usa
+
+    # --- if / while / loop -----------------------------------------------
+
+    def visitIfStmt(self, ctx: RustiQParser.IfStmtContext):
+        self.visit(ctx.condition())
+        self.emit("if")
+        self._depth += 1
+        self.visit(ctx.block(0))
+        self._depth -= 1
+        has_else_block = len(ctx.block()) == 2
+        if has_else_block or ctx.ifStmt() is not None:
+            self.emit("else")
+            self._depth += 1
+            self.visit(ctx.block(1) if has_else_block else ctx.ifStmt())
+            self._depth -= 1
+        self.emit("end")
+
+    def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
+        self._gen_loop(ctx.block(), ctx.condition())
+
+    def visitLoopStmt(self, ctx: RustiQParser.LoopStmtContext):
+        self._gen_loop(ctx.block(), None)
+
+    def _gen_loop(self, body, condition) -> None:
+        exit_label, next_label = self.new_label("salir"), self.new_label("sigue")
+        self.emit(f"block {exit_label}")
+        self.emit(f"loop {next_label}")
+        self._depth += 1
+        if condition is not None:
+            self.visit(condition)
+            self.emit("i32.eqz")
+            self.emit(f"br_if {exit_label}")
+        self.fn.loops.append((exit_label, next_label))
+        self.visit(body)
+        self.fn.loops.pop()
+        self.emit(f"br {next_label}")
+        self._depth -= 1
+        self.emit("end")
+        self.emit("end")
+
+    # --- break / continue / return -------------------------------------------
+
+    def visitBreakStmt(self, ctx: RustiQParser.BreakStmtContext):
+        self.emit(f"br {self.fn.loops[-1][0]}")
+
+    def visitContinueStmt(self, ctx: RustiQParser.ContinueStmtContext):
+        self.emit(f"br {self.fn.loops[-1][1]}")
+
+    def visitReturnStmt(self, ctx: RustiQParser.ReturnStmtContext):
+        if ctx.expression() is not None:
+            self.visit(ctx.expression())
+        self.emit("return")
+
+    # --- const local --------------------------------------------------------------
+
+    def visitConstLocalDecl(self, ctx: RustiQParser.ConstLocalDeclContext):
+        symbol = self.info.symbol.get(ctx)
+        name = self.declare_symbol(symbol)
+        self.visit(ctx.expression())
+        self.emit(f"local.set {name}")
