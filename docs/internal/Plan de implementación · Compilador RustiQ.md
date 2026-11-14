@@ -256,12 +256,12 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **A**
 
-- [ ] Lunes 9: emisor base con módulo, funciones, locales y exports. Lo usan ambos
-- [ ] Funciones y llamadas: firmas, número y tipo de argumentos, tipo de retorno, retorno faltante. Tipos y codegen
-- [ ] Control de flujo: `if`, `while`, `loop`, `break`, `continue`, `return` y bloques con valor final. Tipos y codegen
-- [ ] Constantes globales y locales
-- [ ] Structs y tuplas: declaración, literal y acceso a campo. Tipos, layout y codegen
-- [ ] Inválidos de sus características
+- [x] Lunes 9: emisor base con módulo, funciones, locales y exports. Lo usan ambos
+- [x] Funciones y llamadas: firmas, número y tipo de argumentos, tipo de retorno, retorno faltante. Tipos y codegen
+- [x] Control de flujo: `if`, `while`, `loop`, `break`, `continue`, `return` y bloques con valor final. Tipos y codegen
+- [x] Constantes globales y locales
+- [x] Structs y tuplas: declaración, literal y acceso a campo. Tipos, layout y codegen
+- [x] Inválidos de sus características
 
 **B**
 

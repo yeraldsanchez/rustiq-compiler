@@ -11,6 +11,9 @@ Estado: **por defecto** = asumido por el plan, sin confirmar. **confirmado** = r
 | G1 | Tipos `Copy` | Regla de Rust: `i32`, `f64`, `bool`, `char` y `&T` son Copy. `&mut T`, `String`, structs y enums se mueven. Array o tupla es Copy solo si todos sus elementos lo son | por defecto |
 | G2 | Sombreado | Prohibido en el mismo ámbito, permitido en ámbitos internos | por defecto |
 | G3 | Memoria | Bump allocator sin liberar, con `memory.grow`. Ver `memoria.md` | por defecto |
+| G5 | Ramas de `if` y cuerpo de `while`/`loop` | No producen valor (consecuencia de P4). Para devolver un valor desde un `if` se usa `return` | por defecto |
+| G6 | Constantes | Las globales se expanden en cada uso y se pueden declarar en cualquier orden. No se verifica que su inicializador sea constante ni que no sea recursivo | por defecto |
+| G7 | `main` | Obligatoria, sin parámetros y sin valor de retorno (`E_BAD_MAIN`) | por defecto |
 | G4 | Alcance de `String` | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación | confirmado (P9) |
 
 ## Puntos para el profesor
