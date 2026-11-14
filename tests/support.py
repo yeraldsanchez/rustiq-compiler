@@ -18,7 +18,7 @@ from rustiq.errors import E_UNDECLARED
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.pipeline import assemble, parse_source
 from rustiq.semantic.analyzer import Analyzer
-from rustiq.types import BOOL, CHAR, F64, I32, UNIT
+from rustiq.types import BOOL, CHAR, F64, I32
 
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 

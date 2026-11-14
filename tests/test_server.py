@@ -1,7 +1,6 @@
 """server/app.py: POST /compile según el contrato 6."""
 
 import base64
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
