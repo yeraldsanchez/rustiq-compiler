@@ -2,7 +2,8 @@
 
 from antlr4 import CommonTokenStream, InputStream
 
-from rustiq.codegen.emitter import Emitter, wasm_type
+from rustiq.codegen.emitter import Emitter
+from rustiq.codegen.wasm_types import wasm_type
 from rustiq.errors import E_REDECLARED, E_UNKNOWN_TYPE
 from rustiq.generated.RustiQLexer import RustiQLexer
 from rustiq.generated.RustiQParser import RustiQParser
@@ -38,13 +39,13 @@ def test_main_vacio_se_exporta_y_valida():
 
 
 def test_firma_con_parametros_y_retorno():
-    wat = _wat("fn f(a: i32, b: f64) -> bool { }\nfn main() {}")
-    assert "(func $f (param $p0 i32) (param $p1 f64) (result i32)" in wat
+    wat = _wat("fn f(a: i32, b: f64) -> bool { return true; }\nfn main() {}")
+    assert "(func $f (param $a_0 i32) (param $b_1 f64) (result i32)" in wat
 
 
 def test_funcion_unit_no_tiene_result():
     wat = _wat("fn g(a: i32) {}\nfn main() {}")
-    assert "(func $g (param $p0 i32)\n" in wat
+    assert "(func $g (param $a_0 i32)\n" in wat
 
 
 def test_varias_funciones_sin_main_en_el_nombre_no_se_exportan():
@@ -53,7 +54,9 @@ def test_varias_funciones_sin_main_en_el_nombre_no_se_exportan():
 
 
 def test_firmas_registradas():
-    _, info, _ = _analyze("struct P { x: i32 }\nfn f(p: &mut P, xs: [i32; 3]) -> (i32, f64) { }")
+    _, info, _ = _analyze(
+        "struct P { x: i32 }\nfn f(p: &mut P, xs: [i32; 3]) -> (i32, f64) { loop {} }\nfn main() {}"
+    )
     sig = info.functions["f"]
     assert sig.params == [("p", RefT(StructT("P"), True)), ("xs", ArrayT(I32, 3))]
     assert sig.ret == TupleT((I32, F64))

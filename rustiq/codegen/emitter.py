@@ -11,33 +11,21 @@ from pathlib import Path
 from rustiq.codegen.gen_arrays import ArraysGenMixin
 from rustiq.codegen.gen_control import ControlGenMixin
 from rustiq.codegen.gen_exprs import ExprsGenMixin
+from rustiq.codegen.gen_items import ItemsGenMixin
 from rustiq.codegen.gen_match import MatchGenMixin
 from rustiq.codegen.gen_refs import RefsGenMixin
 from rustiq.codegen.gen_structs import StructsGenMixin
+from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQVisitor import RustiQVisitor
+from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.info import SemanticInfo, Symbol
-from rustiq.types import F64, UNIT, Type
+from rustiq.types import UNIT, Type
 
 INDENT = "  "
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
-
-# (nombre, tipo Wasm del parámetro). Pendiente de aprobación del profesor (P1).
-HOST_IMPORTS = (
-    ("print_i32", "i32"),
-    ("print_f64", "f64"),
-    ("print_bool", "i32"),
-    ("print_char", "i32"),
-    ("print_str", "i32"),
-)
-
-
-def wasm_type(t: Type) -> str:
-    """Tipo Wasm de un valor RustiQ (docs/memoria.md): f64 va en f64, el resto en i32."""
-    return "f64" if t == F64 else "i32"
-
 
 @dataclass
 class FunctionCtx:
@@ -47,10 +35,11 @@ class FunctionCtx:
     locals: dict[str, str] = field(default_factory=dict)  # nombre Wasm -> tipo Wasm
     labels: int = 0
     temps: int = 0
+    loops: list[tuple[str, str]] = field(default_factory=list)  # (salida, siguiente) de cada ciclo
 
 
 class Emitter(
-    ControlGenMixin, StructsGenMixin, MatchGenMixin,  # A
+    ItemsGenMixin, ControlGenMixin, StructsGenMixin, MatchGenMixin,  # A
     ExprsGenMixin, ArraysGenMixin, RefsGenMixin,  # B
     RustiQVisitor,
 ):
@@ -59,6 +48,7 @@ class Emitter(
         self._lines: list[str] = []
         self._depth = 0
         self._fn: FunctionCtx | None = None
+        self.global_consts: dict[int, RustiQParser.ExpressionContext] = {}
 
     # --- Convención de los visitX de expresión ----------------------------
     #
@@ -79,6 +69,18 @@ class Emitter(
     def local_name(symbol: Symbol) -> str:
         """Nombre Wasm del local de un símbolo. El uid evita choques por sombreado."""
         return f"${symbol.name}_{symbol.uid}"
+
+    def load_symbol(self, symbol: Symbol) -> None:
+        """Deja el valor de un símbolo en la pila. Lo usan los visitX de identificadores.
+
+        Una constante global se expande en cada uso volviendo a emitir su
+        inicializador; el resto vive en un local.
+        """
+        initializer = self.global_consts.get(symbol.uid)
+        if initializer is not None:
+            self.visit(initializer)
+        else:
+            self.emit(f"local.get {self.local_name(symbol)}")
 
     def declare_local(self, name: str, t: Type) -> str:
         """Declara un local (una sola vez) y devuelve su nombre Wasm."""
@@ -105,10 +107,11 @@ class Emitter(
         self._lines = []
         self._depth = 0
         self._fn = None
+        self.global_consts = {}
         self.emit("(module")
         self._depth += 1
-        for name, wasm_param in HOST_IMPORTS:
-            self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_param})))')
+        for name, param_type in HOST_FUNCTIONS:
+            self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
         self.emit('(memory (export "memory") 1)')
         for line in RUNTIME_WAT.splitlines():
             self.emit(line)
@@ -118,6 +121,11 @@ class Emitter(
         return "\n".join(self._lines) + "\n"
 
     def visitProgram(self, ctx: RustiQParser.ProgramContext):
+        for item in ctx.item():
+            decl = item.constDecl()
+            symbol = self.info.symbol.get(decl) if decl is not None else None
+            if symbol is not None:
+                self.global_consts[symbol.uid] = decl.expression()
         for item in ctx.item():
             self.visit(item)
 
@@ -135,9 +143,9 @@ class Emitter(
         outer_lines, self._lines = self._lines, []
         outer_depth, self._depth = self._depth, self._depth + 1
         self.visit(ctx.block())
-        if sig.ret != UNIT:
-            # TODO(A): quitar cuando existan los visitX de bloque y expresión. Mientras
-            # el cuerpo no deja su valor, `unreachable` hace que el módulo valide.
+        if sig.ret != UNIT and ctx.block().expression() is None:
+            # Sin expresión final, todos los caminos terminan en return o en un loop sin
+            # salida (lo garantiza el análisis). `unreachable` cierra el tipo de la función.
             self.emit("unreachable")
         body, self._lines = self._lines, outer_lines
         self._depth = outer_depth
@@ -168,3 +176,25 @@ class Emitter(
             symbol = self.info.symbol.get(p)
             names.append(self.local_name(symbol) if symbol else f"$p{i}")
         return names
+
+    # --- Espina compartida de `postfix` (ver analyzer.py) -----------------------
+    #
+    # Cada sufijo encuentra el valor del operando en la pila y recibe su tipo en
+    # `info.expr_type[sufijo]`. visitCallSuffix y visitFieldSuffix son de A,
+    # visitIndexSuffix de B.
+
+    def visitPostfix(self, ctx: RustiQParser.PostfixContext):
+        primary = ctx.primary()
+        suffixes = ctx.children[1:]
+        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
+            primary, RustiQParser.IdentPContext
+        ):
+            self.gen_call(primary, suffixes[0])
+            suffixes = suffixes[1:]
+        else:
+            self.visit(primary)
+        for suffix in suffixes:
+            self.visit(suffix)
+
+    def visitConstDecl(self, ctx: RustiQParser.ConstDeclContext):
+        return None  # las constantes globales se expanden en cada uso

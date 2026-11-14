@@ -10,6 +10,7 @@ from rustiq.generated.RustiQLexer import RustiQLexer
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.analyzer import Analyzer
 from rustiq.semantic.info import SemanticInfo
+from tests.support import PROGRAMA_MINIMO
 
 EJEMPLO = Path(__file__).parent / "valid" / "structs_basico.rq"
 
@@ -36,7 +37,7 @@ def test_analyzer_error_con_posicion():
 
 
 def test_emitter_genera_modulo_valido(tmp_path):
-    tree = _parse(EJEMPLO.read_text(encoding="utf-8"))
+    tree = _parse(PROGRAMA_MINIMO)
     info, _ = Analyzer().analyze(tree)
     wat = Emitter(info).generate(tree)
 
