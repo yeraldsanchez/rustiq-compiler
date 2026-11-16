@@ -6,14 +6,16 @@ Estado: **por defecto** = asumido por el plan, sin confirmar. **confirmado** = r
 
 ## Decisiones del grupo
 
+Criterio del grupo (16 de noviembre de 2026): en cada decisión abierta se elige la opción más sencilla que cumpla el enunciado, aunque sea más restrictiva que Rust.
+
 | # | Tema | Decisión | Estado |
 | --- | --- | --- | --- |
-| G1 | Tipos `Copy` | Regla de Rust: `i32`, `f64`, `bool`, `char` y `&T` son Copy. `&mut T`, `String`, structs y enums se mueven. Array o tupla es Copy solo si todos sus elementos lo son | por defecto |
-| G2 | Sombreado | Prohibido en el mismo ámbito, permitido en ámbitos internos | por defecto |
-| G3 | Memoria | Bump allocator sin liberar, con `memory.grow`. Ver `memoria.md` | por defecto |
-| G5 | Ramas de `if` y cuerpo de `while`/`loop` | No producen valor (consecuencia de P4). Para devolver un valor desde un `if` se usa `return` | por defecto |
-| G6 | Constantes | Las globales se expanden en cada uso y se pueden declarar en cualquier orden. No se verifica que su inicializador sea constante ni que no sea recursivo | por defecto |
-| G7 | `main` | Obligatoria, sin parámetros y sin valor de retorno (`E_BAD_MAIN`) | por defecto |
+| G1 | Tipos `Copy` | Solo `i32`, `f64`, `bool`, `char`, `()` y `&T` son Copy. Todo lo que vive en el heap se mueve: `String`, arrays, tuplas, structs y enums, igual que `&mut T`. Así una copia nunca necesita `memcpy` | confirmado |
+| G2 | Sombreado | Prohibido en el mismo ámbito, permitido en ámbitos internos. Es la regla base del enunciado, sin reglas de sombreado extra | confirmado |
+| G3 | Memoria | Bump allocator sin liberar, con `memory.grow`. Ver `memoria.md` | confirmado |
+| G5 | Ramas de `if` y cuerpo de `while`/`loop` | No producen valor (consecuencia de P4). Para devolver un valor desde un `if` se usa `return` | confirmado |
+| G6 | Constantes | Las globales se expanden en cada uso y se pueden declarar en cualquier orden. No se verifica que su inicializador sea constante ni que no sea recursivo | confirmado |
+| G7 | `main` | Obligatoria, sin parámetros y sin valor de retorno (`E_BAD_MAIN`) | confirmado |
 | G4 | Alcance de `String` | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación | confirmado (P9) |
 
 ## Puntos para el profesor
@@ -56,6 +58,7 @@ _Por completar._
 
 ## Diferencias con Rust
 
+- Los arrays y las tuplas siempre se mueven (G1). En Rust son Copy si todos sus elementos lo son.
 - Todo movimiento condicional se trata como definitivo (más estricto que Rust), si el análisis de ramas se recorta.
 - El préstamo vive hasta el final del ámbito léxico donde se creó, sin análisis de último uso.
 - No hay liberación de memoria (`drop`).

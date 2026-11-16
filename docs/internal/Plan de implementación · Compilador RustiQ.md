@@ -286,7 +286,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 - [ ] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`
 - [ ] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops
 - [ ] No mover un valor con préstamo activo, consultando `borrows`
-- [ ] Copia de arrays y tuplas Copy con `memcpy`
+- [x] ~~Copia de arrays y tuplas Copy con `memcpy`~~ Ya no hace falta: arrays y tuplas se mueven (G1)
 - [ ] Inválidos de sus características
 
 **B**
@@ -363,4 +363,4 @@ Si algo se atrasa más de un día, se aplica el recorte en vez de empujar la fec
 | wabt no instala en alguna máquina      | Error en etapa 0                                 | Usar `wasmtime.wat2wasm` como conversor                                                                                   |
 | Uno de los dos se enferma o se atrasa  | Una sincronización no se cumple                  | El otro toma las tareas pendientes. Posible por la revisión cruzada de PR                                                 |
 
-Orden de recorte si falta tiempo al final: resaltado de sintaxis, chequeo de límites de arrays, patrones anidados, copia de arrays Copy. Nunca se recorta validación ni ejecución real del .wasm.
+Orden de recorte si falta tiempo al final: resaltado de sintaxis, chequeo de límites de arrays, patrones anidados. Nunca se recorta validación ni ejecución real del .wasm.
