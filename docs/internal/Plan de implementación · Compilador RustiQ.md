@@ -356,11 +356,11 @@ Si algo se atrasa más de un día, se aplica el recorte en vez de empujar la fec
 |----------------------------------------|--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | La gramática se atrasa                 | El vie 6 el .g4 unido no parsea los 10 programas | Cada uno arranca la etapa 2 con lo que ya parsea: funciones, i32, if, while. La gramática restante se termina en paralelo |
 | El profesor cambia la gramática        | Respuesta a los puntos pendientes                | Cada extensión es una regla nueva en el .g4. Se regenera y se agrega un caso al typecheck y al codegen                    |
-| Ownership en ramas y loops es complejo | El mié 18 fallan los inválidos de ramas          | Tratar todo movimiento condicional como movimiento definitivo. Es más estricto que Rust, se documenta                     |
-| Lifetime de préstamos                  | Casos difíciles con préstamos que cruzan bloques | Préstamo activo hasta el final del ámbito léxico donde se creó. Sin análisis de último uso                                |
-| Match con patrones anidados            | El codegen se complica                           | Soportar un solo nivel de anidación y documentarlo como limitación                                                        |
+| Ownership en ramas y loops es complejo | El mié 18 fallan los inválidos de ramas          | Ya decidido en G8: movida si se mueve en cualquier rama, sin reponer dentro de una rama                                   |
+| Lifetime de préstamos                  | Casos difíciles con préstamos que cruzan bloques | Ya decidido en G9: hasta el fin del bloque de la variable, o de la sentencia si es temporal                               |
+| Match con patrones anidados            | El codegen se complica                           | No se recorta, la gramática lo permite. Codegen recursivo y exhaustividad simple (G10)                                    |
 | Memoria del bump allocator             | Programas con loops que crean String             | `memory.grow` y documentar que no se libera memoria                                                                       |
 | wabt no instala en alguna máquina      | Error en etapa 0                                 | Usar `wasmtime.wat2wasm` como conversor                                                                                   |
 | Uno de los dos se enferma o se atrasa  | Una sincronización no se cumple                  | El otro toma las tareas pendientes. Posible por la revisión cruzada de PR                                                 |
 
-Orden de recorte si falta tiempo al final: resaltado de sintaxis, chequeo de límites de arrays, patrones anidados. Nunca se recorta validación ni ejecución real del .wasm.
+Orden de recorte si falta tiempo al final: resaltado de sintaxis, chequeo de límites de arrays. Nunca se recorta validación ni ejecución real del .wasm.

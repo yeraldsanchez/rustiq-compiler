@@ -16,6 +16,9 @@ Criterio del grupo (16 de noviembre de 2026): en cada decisión abierta se elige
 | G5 | Ramas de `if` y cuerpo de `while`/`loop` | No producen valor (consecuencia de P4). Para devolver un valor desde un `if` se usa `return` | confirmado |
 | G6 | Constantes | Las globales se expanden en cada uso y se pueden declarar en cualquier orden. No se verifica que su inicializador sea constante ni que no sea recursivo | confirmado |
 | G7 | `main` | Obligatoria, sin parámetros y sin valor de retorno (`E_BAD_MAIN`) | confirmado |
+| G8 | Movimientos en ramas y ciclos | Cada rama de un `if` empieza con el estado de antes del `if`. Después del `if`, la variable queda movida si se movió en cualquier rama. Reponerla dentro de una rama no cuenta, solo fuera del `if`. Mover dentro de un ciclo una variable declarada fuera de él es error | confirmado |
+| G9 | Duración de los préstamos | Un préstamo guardado en una variable dura hasta el fin del bloque donde se declaró esa variable. Un préstamo temporal, como `f(&mut v)`, dura solo esa sentencia. Sin análisis de último uso | confirmado |
+| G10 | Patrones anidados | Se permiten a cualquier profundidad, como dice la gramática. Un `match` es exhaustivo si tiene un brazo `_` o identificador; si es sobre un enum y aparecen todas sus variantes con subpatrones `_` o identificadores; o si es sobre `bool` y aparecen `true` y `false`. En cualquier otro caso se exige `_` | confirmado |
 | G4 | Alcance de `String` | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación | confirmado (P9) |
 
 ## Puntos para el profesor
@@ -59,7 +62,7 @@ _Por completar._
 ## Diferencias con Rust
 
 - Los arrays y las tuplas siempre se mueven (G1). En Rust son Copy si todos sus elementos lo son.
-- Todo movimiento condicional se trata como definitivo (más estricto que Rust), si el análisis de ramas se recorta.
-- El préstamo vive hasta el final del ámbito léxico donde se creó, sin análisis de último uso.
+- Una variable movida dentro de una rama no se repone aunque se le asigne un valor nuevo en esa misma rama (G8). Rust sí la repone si se reasigna en todos los caminos.
+- Un préstamo guardado en una variable vive hasta el fin del bloque de esa variable, aunque ya no se use (G9). Rust lo termina en su último uso.
+- Un `match` con patrones anidados refutables necesita un brazo `_` (G10). Rust calcula la exhaustividad exacta.
 - No hay liberación de memoria (`drop`).
-- Patrones anidados de un solo nivel, si el codegen lo exige.
