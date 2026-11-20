@@ -3,7 +3,7 @@ grammar RustiQ;
 // Version estricta: sigue el EBNF del documento.
 // Unicas adiciones: EOF, la regla condition y el predicado de struct literal.
 // Generar con:
-//   antlr4 -Dlanguage=Python3 -visitor -no-listener RustiQ.g4
+//    antlr4 -Dlanguage=Python3 -visitor -no-listener RustiQ.g4
 
 @parser::members {
 # Pila para desambiguar "identificador {" entre struct literal y bloque.
@@ -252,10 +252,10 @@ matchArm
     ;
 
 pattern
-    : UNDERSCORE                                              # WildcardPat
-    | literal                                                 # LiteralPat
+    : UNDERSCORE                                               # WildcardPat
+    | literal                                                  # LiteralPat
     | IDENT COLONCOLON IDENT (LPAREN patternList RPAREN)?     # EnumPat
-    | IDENT                                                   # BindingPat
+    | IDENT                                                    # BindingPat
     | LPAREN pattern (COMMA pattern)+ COMMA? RPAREN           # TuplePat
     ;
 
