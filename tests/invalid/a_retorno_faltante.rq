@@ -1,0 +1,5 @@
+// ERROR semantico E_BAD_RETURN 4:1
+fn valor() -> i32 {
+    print_i32(1);
+}
+fn main() {}

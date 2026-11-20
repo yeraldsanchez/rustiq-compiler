@@ -19,6 +19,8 @@ Wasm solo maneja números (`i32`, `f64`). Todo valor compuesto vive en la memori
 | Referencia (`&T`, `&mut T`) | `i32` con la dirección del valor |
 | Escalar con `&` aplicado | Vive en una celda del heap. El local guarda su dirección (`Symbol.address_taken`) |
 
+Una referencia a un struct o tupla es el mismo puntero que el valor, así que `p.x` con `p: &Punto` no carga nada extra. El acceso a campo quita un nivel de referencia.
+
 ## Heap
 
 - Bump allocator que empieza en la dirección 1024. Las direcciones menores se reservan para datos estáticos (literales de String).

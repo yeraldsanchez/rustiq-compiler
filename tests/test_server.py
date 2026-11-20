@@ -1,14 +1,13 @@
 """server/app.py: POST /compile según el contrato 6."""
 
 import base64
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from server.app import MAX_SOURCE_CHARS, app
+from tests.support import PROGRAMA_MINIMO
 
-EJEMPLO = Path(__file__).parent / "valid" / "structs_basico.rq"
 CAMPOS_ERROR = {"phase", "code", "message", "line", "column", "length"}
 
 
@@ -18,7 +17,7 @@ def client():
 
 
 def test_programa_valido(client):
-    resp = client.post("/compile", json={"source": EJEMPLO.read_text(encoding="utf-8")})
+    resp = client.post("/compile", json={"source": PROGRAMA_MINIMO})
     assert resp.status_code == 200
     body = resp.json()
     assert body["ok"] is True

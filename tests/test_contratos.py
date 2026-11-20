@@ -25,10 +25,11 @@ def test_is_copy_referencias():
     assert not is_copy(RefT(I32, mutable=True))
 
 
-def test_is_copy_compuestos():
-    assert is_copy(ArrayT(I32, 3))
+def test_is_copy_compuestos_siempre_se_mueven():
+    # G1: aunque sus elementos sean Copy, arrays y tuplas se mueven.
+    assert not is_copy(ArrayT(I32, 3))
     assert not is_copy(ArrayT(STRING, 3))
-    assert is_copy(TupleT((I32, BOOL)))
+    assert not is_copy(TupleT((I32, BOOL)))
     assert not is_copy(TupleT((I32, STRING)))
     assert not is_copy(StructT("Punto"))
     assert not is_copy(EnumT("Estado"))

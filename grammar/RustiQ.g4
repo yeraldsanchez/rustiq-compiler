@@ -5,11 +5,6 @@ grammar RustiQ;
 // Generar con:
 //   antlr4 -Dlanguage=Python3 -visitor -no-listener RustiQ.g4
 
-// Dueños de las reglas (ver plan de implementación):
-//   A = Yerald: items, tipos, patrones, match, structs, enums y tuplas
-//   B = Byron:  léxico, sentencias, expresiones, place, arrays
-// Cada quien edita solo sus reglas. Si una regla ajena necesita cambio, se avisa.
-
 @parser::members {
 # Pila para desambiguar "identificador {" entre struct literal y bloque.
 # En la condicion de if/while y en el valor de match no se admiten struct literals.
@@ -23,12 +18,10 @@ def ns(self):
 // Programa e items
 // ---------------------------------------------------------------
 
-// Dueño: A (Yerald)
 program
     : item* EOF
     ;
 
-// Dueño: A (Yerald)
 item
     : functionDecl
     | structDecl
@@ -36,47 +29,38 @@ item
     | constDecl
     ;
 
-// Dueño: A (Yerald)
 functionDecl
     : FN IDENT LPAREN parameterList? RPAREN (ARROW type)? block
     ;
 
-// Dueño: A (Yerald)
 parameterList
     : parameter (COMMA parameter)* COMMA?
     ;
 
-// Dueño: A (Yerald)
 parameter
     : MUT? IDENT COLON type
     ;
 
-// Dueño: A (Yerald)
 constDecl
     : CONST IDENT COLON type ASSIGN expression SEMI
     ;
 
-// Dueño: A (Yerald)
 structDecl
     : STRUCT IDENT LBRACE (fieldDecl (COMMA fieldDecl)* COMMA?)? RBRACE
     ;
 
-// Dueño: A (Yerald)
 fieldDecl
     : IDENT COLON type
     ;
 
-// Dueño: A (Yerald)
 enumDecl
     : ENUM IDENT LBRACE variantDecl (COMMA variantDecl)* COMMA? RBRACE
     ;
 
-// Dueño: A (Yerald)
 variantDecl
     : IDENT (LPAREN typeList RPAREN)?
     ;
 
-// Dueño: A (Yerald)
 typeList
     : type (COMMA type)* COMMA?
     ;
@@ -85,7 +69,6 @@ typeList
 // Tipos
 // ---------------------------------------------------------------
 
-// Dueño: A (Yerald)
 type
     : primitiveType                                       # PrimitiveT
     | STRING_TYPE                                         # StringT
@@ -97,7 +80,6 @@ type
     | IDENT                                               # NamedT
     ;
 
-// Dueño: A (Yerald)
 primitiveType
     : I32 | F64 | BOOL | CHAR
     ;
@@ -106,12 +88,10 @@ primitiveType
 // Bloques y sentencias
 // ---------------------------------------------------------------
 
-// Dueño: B (Byron)
 block
     : LBRACE statement* expression? RBRACE
     ;
 
-// Dueño: B (Byron)
 statement
     : letDecl                    # LetStmt
     | constLocalDecl             # ConstStmt
@@ -126,58 +106,47 @@ statement
     | block                      # BlockS
     ;
 
-// Dueño: B (Byron)
 letDecl
     : LET MUT? IDENT (COLON type)? (ASSIGN expression)? SEMI
     ;
 
-// Dueño: B (Byron)
 constLocalDecl
     : CONST IDENT COLON type ASSIGN expression SEMI
     ;
 
-// Dueño: B (Byron)
 assignment
     : place assignOp expression
     ;
 
-// Dueño: B (Byron)
 assignOp
     : ASSIGN | PLUSEQ | MINUSEQ | STAREQ | SLASHEQ
     ;
 
-// Dueño: B (Byron)
 returnStmt
     : RETURN expression? SEMI
     ;
 
-// Dueño: B (Byron)
 breakStmt
     : BREAK SEMI
     ;
 
-// Dueño: B (Byron)
 continueStmt
     : CONTINUE SEMI
     ;
 
-// Dueño: B (Byron)
 whileStmt
     : WHILE condition block
     ;
 
-// Dueño: B (Byron)
 loopStmt
     : LOOP block
     ;
 
-// Dueño: B (Byron)
 ifStmt
     : IF condition block (ELSE (block | ifStmt))?
     ;
 
 // Expresion sin struct literals (para if, while y match).
-// Dueño: B (Byron)
 condition
     : {self.ns().append(True)} expression {self.ns().pop()}
     ;
@@ -186,72 +155,58 @@ condition
 // Expresiones (precedencia de menor a mayor)
 // ---------------------------------------------------------------
 
-// Dueño: B (Byron)
 expression
     : logicalOr
     ;
 
-// Dueño: B (Byron)
 logicalOr
     : logicalAnd (OR logicalAnd)*
     ;
 
-// Dueño: B (Byron)
 logicalAnd
     : comparison (AND comparison)*
     ;
 
-// Dueño: B (Byron)
 comparison
     : additive (relOp additive)?
     ;
 
-// Dueño: B (Byron)
 relOp
     : EQEQ | NEQ | LT | LE | GT | GE
     ;
 
-// Dueño: B (Byron)
 additive
     : multiplicative ((PLUS | MINUS) multiplicative)*
     ;
 
-// Dueño: B (Byron)
 multiplicative
     : unary ((STAR | SLASH | PERCENT) unary)*
     ;
 
-// Dueño: B (Byron)
 unary
     : (MINUS | BANG | AMP MUT? | STAR)? postfix
     ;
 
-// Dueño: B (Byron)
 postfix
     : primary (callSuffix | fieldSuffix | indexSuffix)*
     ;
 
-// Dueño: B (Byron)
 callSuffix
     : LPAREN argumentList? RPAREN
     ;
 
-// Dueño: B (Byron)
 argumentList
     : expression (COMMA expression)* COMMA?
     ;
 
-// Dueño: B (Byron)
 fieldSuffix
     : DOT IDENT
     ;
 
-// Dueño: B (Byron)
 indexSuffix
     : LBRACK expression RBRACK
     ;
 
-// Dueño: B (Byron)
 primary
     : literal                                                            # LiteralP
     | {not self.ns()[-1]}? structLiteral                                 # StructP
@@ -264,27 +219,22 @@ primary
     | block                                                              # BlockP
     ;
 
-// Dueño: A (Yerald)
 tupleLiteral
     : LPAREN expression (COMMA expression)+ COMMA? RPAREN
     ;
 
-// Dueño: B (Byron)
 arrayLiteral
     : LBRACK expression (COMMA expression)* COMMA? RBRACK
     ;
 
-// Dueño: A (Yerald)
 structLiteral
     : IDENT LBRACE (fieldInit (COMMA fieldInit)* COMMA?)? RBRACE
     ;
 
-// Dueño: A (Yerald)
 fieldInit
     : IDENT COLON expression
     ;
 
-// Dueño: A (Yerald)
 enumValue
     : IDENT COLONCOLON IDENT (LPAREN argumentList RPAREN)?
     ;
@@ -293,17 +243,14 @@ enumValue
 // Match y patrones
 // ---------------------------------------------------------------
 
-// Dueño: A (Yerald)
 matchExpr
     : MATCH condition LBRACE matchArm (COMMA matchArm)* COMMA? RBRACE
     ;
 
-// Dueño: A (Yerald)
 matchArm
     : pattern FATARROW expression
     ;
 
-// Dueño: A (Yerald)
 pattern
     : UNDERSCORE                                              # WildcardPat
     | literal                                                 # LiteralPat
@@ -312,12 +259,10 @@ pattern
     | LPAREN pattern (COMMA pattern)+ COMMA? RPAREN           # TuplePat
     ;
 
-// Dueño: A (Yerald)
 patternList
     : pattern (COMMA pattern)* COMMA?
     ;
 
-// Dueño: B (Byron)
 place
     : IDENT (DOT IDENT | LBRACK expression RBRACK)*
     ;
@@ -326,7 +271,6 @@ place
 // Literales
 // ---------------------------------------------------------------
 
-// Dueño: B (Byron)
 literal
     : INT_LIT
     | FLOAT_LIT
@@ -341,7 +285,6 @@ literal
 // Las palabras reservadas van antes de IDENT.
 // ---------------------------------------------------------------
 
-// Dueño de todo el léxico: B (Byron)
 // Palabras reservadas
 FN          : 'fn' ;
 STRUCT      : 'struct' ;

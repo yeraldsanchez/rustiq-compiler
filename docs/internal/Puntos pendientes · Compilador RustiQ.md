@@ -28,9 +28,9 @@ Con eso P2, P3, P4, P5, P6, P8 y P9 quedan con la opción por defecto, apegada a
 | P8 | Conversión entre i32 y f64 | Profesor | No existe | Resuelto | No existe |
 | P9 | Operaciones sobre String | Profesor | Crear, mover, pasar, imprimir | Resuelto | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación |
 | P10 | Tipo `&&T` escrito sin espacio | Grupo | No soportado, se escribe `& &T` | Resuelto | Soportado en tipos. `&&x` en expresiones no existe |
-| G1 | Qué tipos son Copy | Grupo | Regla de Rust | Sin preguntar |  |
-| G2 | Sombreado en el mismo ámbito | Grupo | Prohibido, solo en ámbitos internos | Sin preguntar |  |
-| G3 | Manejo de memoria | Grupo | Bump allocator sin liberar | Sin preguntar |  |
+| G1 | Qué tipos son Copy | Grupo | Regla de Rust | Resuelto | Solo escalares, `()` y `&T`. Arrays, tuplas, String, structs y enums se mueven |
+| G2 | Sombreado en el mismo ámbito | Grupo | Prohibido, solo en ámbitos internos | Resuelto | Prohibido en el mismo ámbito, permitido en ámbitos internos |
+| G3 | Manejo de memoria | Grupo | Bump allocator sin liberar | Resuelto | Bump allocator sin liberar, con `memory.grow` |
 
 ## Puntos para el profesor
 
@@ -216,6 +216,8 @@ En expresiones es distinto: `unary` acepta un solo prefijo, así que `&&x` ni `&
 ## Decisiones del grupo
 
 El enunciado deja estas decisiones abiertas. Se pueden tomar sin consultar, siempre que se documenten y se expliquen en la defensa.
+
+**Criterio del grupo (16 de noviembre de 2026):** se elige la opción más sencilla que cumpla el enunciado. G2 y G3 quedan con su opción por defecto. G1 se simplifica: arrays y tuplas también se mueven, así ninguna copia necesita `memcpy`. La decisión final de cada una está en `docs/decisiones.md`.
 
 ### G1 · Qué tipos son Copy
 
