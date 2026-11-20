@@ -1,0 +1,4 @@
+// ERROR semantico E_UNKNOWN_TYPE 3:13
+fn main() {
+    let p = Nada { x: 1 };
+}

@@ -1,0 +1,5 @@
+// ERROR semantico E_UNKNOWN_FIELD 4:27
+struct Punto { x: i32, y: i32 }
+fn main() {
+    let p = Punto { x: 1, z: 2, y: 3 };
+}

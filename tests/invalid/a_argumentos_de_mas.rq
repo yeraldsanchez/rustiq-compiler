@@ -1,0 +1,3 @@
+// ERROR semantico E_ARG_COUNT 3:13
+fn dos() -> i32 { return 2; }
+fn main() { dos(1, 2); }

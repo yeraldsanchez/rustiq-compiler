@@ -69,19 +69,15 @@ UNIT = TupleT(())  # tipo de las funciones sin valor de retorno: ()
 
 
 def is_copy(t: Type) -> bool:
-    """Regla única de copia (decisión G1, igual que Rust).
+    """Regla única de copia (decisión G1).
 
     - i32, f64, bool, char y () son Copy.
     - &T es Copy, &mut T no.
-    - Array o tupla es Copy solo si todos sus elementos lo son.
-    - String, structs y enums se mueven.
+    - Todo lo que vive en el heap se mueve: String, arrays, tuplas, structs y
+      enums. Así copiar un valor nunca necesita memcpy (más estricto que Rust).
     """
-    if t in (I32, F64, BOOL, CHAR):
+    if t in (I32, F64, BOOL, CHAR, UNIT):
         return True
     if isinstance(t, RefT):
         return not t.mutable
-    if isinstance(t, ArrayT):
-        return is_copy(t.elem)
-    if isinstance(t, TupleT):
-        return all(is_copy(e) for e in t.elems)
     return False

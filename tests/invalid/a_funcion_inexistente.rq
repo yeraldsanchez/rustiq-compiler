@@ -1,0 +1,5 @@
+// ERROR semantico E_UNDECLARED 4:5
+fn main() {
+    // la función no existe
+    nada();
+}

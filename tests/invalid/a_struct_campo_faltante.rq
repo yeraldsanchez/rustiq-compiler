@@ -1,0 +1,6 @@
+// ERROR semantico E_MISSING_FIELD 5:13
+struct Punto { x: i32, y: i32 }
+fn main() {
+    let a = 1;
+    let p = Punto { x: a };
+}

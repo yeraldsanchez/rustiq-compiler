@@ -1,0 +1,7 @@
+// ERROR semantico E_BREAK_OUTSIDE_LOOP 5:9
+fn main() {
+    if true {
+        print_i32(1);
+        continue;
+    }
+}

@@ -1,0 +1,5 @@
+// ERROR semantico E_BAD_RETURN 3:5
+fn valor() -> i32 {
+    return;
+}
+fn main() {}
