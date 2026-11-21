@@ -37,6 +37,9 @@ class Analyzer(
         self.type_names: dict[str, Type] = {}  # structs y enums declarados
         self.fn_ret: Type | None = None  # tipo de retorno de la funciÃ³n en anÃ¡lisis
         self.loop_depth = 0  # ciclos abiertos, para break y continue
+        self.move_states: dict[int, str] = {}  # uid -> estado (moves.py)
+        self.move_loop_depth: dict[int, int] = {}  # uid -> ciclos abiertos al declararlo
+        self.moved_in_branches: list[set[int]] = []  # uids movidos en cada if/match abierto
 
     def analyze(self, tree) -> tuple[SemanticInfo, list[CompileError]]:
         self.visit(tree)

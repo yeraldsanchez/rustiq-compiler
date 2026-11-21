@@ -99,12 +99,19 @@ class StructsMixin:
                     f"El campo '{fname}' de '{name}'",
                 )
 
+        # 4. Registrar el uso para el Borrow Checker (Viene de main)
+        for fi in inits:
+            self.consume(fi.expression())
+
         result = StructT(name)
         self.info.expr_type.put(ctx, result)
         return result
 
     def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
         elems = [self.visit(e) for e in ctx.expression()]
+        # Registrar el uso para el Borrow Checker (Viene de main)
+        for e in ctx.expression():
+            self.consume(e)
         if any(e is None for e in elems):
             return None
         result = TupleT(tuple(elems))

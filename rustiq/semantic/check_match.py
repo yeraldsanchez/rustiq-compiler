@@ -43,6 +43,9 @@ class MatchMixin:
         if pat is None or target_type is None:
             return
 
+        # Guardar el tipo del patrón para el generador de código
+        self.info.expr_type.put(pat, target_type)
+
         # Patrón comodín: _
         if isinstance(pat, RustiQParser.WildcardPatContext):
             return
@@ -51,7 +54,7 @@ class MatchMixin:
         if isinstance(pat, RustiQParser.BindingPatContext):
             sym = self.declare(pat.IDENT().getText(), target_type, False, "local", pat.IDENT())
             if sym is not None:
-                self.info.symbol.put(pat, sym)  # <--- CLAVE: guardar el símbolo
+                self.info.symbol.put(pat, sym)
             return
 
         # Patrón literal: 1, "hola", true...

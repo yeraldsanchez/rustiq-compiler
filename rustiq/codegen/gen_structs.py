@@ -14,6 +14,8 @@ from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.types import RefT, StructT, Type
 
 SLOT_SIZE = 8
+TAG_SLOT = 0  # un enum guarda su tag en la ranura 0
+PAYLOAD_FIRST_SLOT = 1  # y su payload desde la ranura 1
 
 
 def slot_offset(index: int) -> int:
@@ -28,7 +30,7 @@ class StructsGenMixin:
         fields = self.info.structs[base.name].fields
         return list(fields).index(field), fields[field]
 
-    def _alloc_slots(self, count: int) -> str:
+    def alloc_slots(self, count: int) -> str:
         """Reserva `count` ranuras y deja el puntero en un local temporal nuevo."""
         pointer = self.new_temp(StructT("_"))
         self.emit(f"i32.const {slot_offset(count)}")
@@ -36,24 +38,24 @@ class StructsGenMixin:
         self.emit(f"local.set {pointer}")
         return pointer
 
-    def _store_slot(self, pointer: str, index: int, value_type: Type, expression) -> None:
+    def store_slot(self, pointer: str, index: int, value_type: Type, expression) -> None:
         self.emit(f"local.get {pointer}")
         self.visit(expression)
         self.emit(f"{wasm_type(value_type)}.store offset={slot_offset(index)}")
 
     def visitStructLiteral(self, ctx: RustiQParser.StructLiteralContext):
         fields = self.info.structs[ctx.IDENT().getText()].fields
-        pointer = self._alloc_slots(len(fields))
+        pointer = self.alloc_slots(len(fields))
         for init in ctx.fieldInit():  # se evalúan en el orden en que se escribieron
             name = init.IDENT().getText()
-            self._store_slot(pointer, list(fields).index(name), fields[name], init.expression())
+            self.store_slot(pointer, list(fields).index(name), fields[name], init.expression())
         self.emit(f"local.get {pointer}")
 
     def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
         elems = self.info.expr_type.get(ctx).elems
-        pointer = self._alloc_slots(len(elems))
+        pointer = self.alloc_slots(len(elems))
         for index, (elem_type, expression) in enumerate(zip(elems, ctx.expression())):
-            self._store_slot(pointer, index, elem_type, expression)
+            self.store_slot(pointer, index, elem_type, expression)
         self.emit(f"local.get {pointer}")
 
     def visitFieldSuffix(self, ctx: RustiQParser.FieldSuffixContext):

@@ -2,90 +2,107 @@
 
 Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
 nunca vuelve a inferir tipos.
+
+Layout (docs/memoria.md): un enum es un puntero a `[tag][payload...]`. El tag
+ocupa la ranura 0 completa y cada dato del payload una ranura desde la 1.
+
+Un match guarda su valor en un temporal y abre un `block` por brazo. Si el patrón
+no calza, se salta al final de ese bloque y se prueba el siguiente brazo. Si
+calza, se evalúa el cuerpo y se salta a la salida del match. Después del último
+brazo va `unreachable`: el análisis de exhaustividad garantiza que no se llega.
 """
 
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.codegen.gen_structs import slot_offset
 from rustiq.codegen.wasm_types import wasm_type
-from rustiq.types import F64, I32
-
+from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.types import UNIT
 
 class MatchGenMixin:
+    # --- Enum::Variante(args) -------------------------------------------------
+
     def visitEnumP(self, ctx: RustiQParser.EnumPContext):
-        """Un enum en una expresión principal (ej. al pasarlo como argumento)."""
         self.visit(ctx.enumValue())
 
     def visitEnumValue(self, ctx: RustiQParser.EnumValueContext):
-        """Genera el código para crear una variante de enum (ej. Forma::Cuadrado(7))."""
-        enum_name = ctx.IDENT(0).getText()
-        variant_name = ctx.IDENT(1).getText()
+        definition = self.info.enums[ctx.IDENT(0).getText()]
+        variant = ctx.IDENT(1).getText()
+        payload = definition.variants[variant]
+        args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
+        
+        # Usamos _alloc_slots de tu gen_structs.py (1 slot para tag + payload)
+        pointer = self._alloc_slots(1 + len(payload))
+        self.emit(f"local.get {pointer}")
+        self.emit(f"i32.const {list(definition.variants.keys()).index(variant)}")
+        self.emit(f"i32.store offset={slot_offset(0)}")
+        
+        # Usamos _store_slot de tu gen_structs.py
+        for i, (value_type, arg) in enumerate(zip(payload, args)):
+            self._store_slot(pointer, 1 + i, value_type, arg)
+        self.emit(f"local.get {pointer}")
 
-        enum_def = self.info.enums[enum_name]
-        tag = list(enum_def.variants.keys()).index(variant_name)
-        payload_types = enum_def.variants[variant_name]
-
-        # 1 slot (8 bytes) para el tag, y un slot por cada dato del payload
-        size = 8 * (1 + len(payload_types))
-        self.emit(f"i32.const {size}")
-        self.emit("call $alloc")
-        tmp = self.new_temp(I32)
-        self.emit(f"local.set {tmp}")
-
-        # Guardar el tag en el offset 0
-        self.emit(f"local.get {tmp}")
-        self.emit(f"i32.const {tag}")
-        self.emit("i32.store")
-
-        # Guardar los argumentos si tiene payload
-        if ctx.argumentList():
-            args = ctx.argumentList().expression()
-            for i, (arg, ptype) in enumerate(zip(args, payload_types)):
-                self.emit(f"local.get {tmp}")
-                self.visit(arg)
-                offset = 8 * (i + 1)
-                self.emit(f"{wasm_type(ptype)}.store offset={offset}")
-
-        # Dejar el puntero al enum en la pila
-        self.emit(f"local.get {tmp}")
+    # --- match ------------------------------------------------------------------
 
     def visitMatchExpr(self, ctx: RustiQParser.MatchExprContext):
-        # Evaluar la condición (deja un puntero en la pila)
+        result = self.info.expr_type.get(ctx)
+        value = self.new_temp(self.info.expr_type.get(ctx.condition()))
         self.visit(ctx.condition())
-        cond_tmp = self.new_temp(I32)
-        self.emit(f"local.set {cond_tmp}")
-        
-        res_type = self.info.expr_type.get(ctx)
-        res_tmp = self.new_temp(res_type)
-        
-        label = self.new_label("match")
-        self.emit(f"block {label}")
-        
+        self.emit(f"local.set {value}")
+        exit_label = self.new_label("fin_match")
+        result_part = f" (result {wasm_type(result)})" if result != UNIT else ""
+        self.emit(f"block {exit_label}{result_part}")
+        self._depth += 1
         for arm in ctx.matchArm():
-            self._bind_pattern(arm.pattern(), cond_tmp, 0)
+            next_arm = self.new_label("sig_brazo")
+            self.emit(f"block {next_arm}")
+            self._depth += 1
+            self.gen_pattern(arm.pattern(), value, next_arm)
             self.visit(arm.expression())
-            self.emit(f"local.set {res_tmp}")
-            self.emit(f"br {label}")
-            
+            self.emit(f"br {exit_label}")
+            self._depth -= 1
+            self.emit("end")
+        self.emit("unreachable")
+        self._depth -= 1
         self.emit("end")
-        self.emit(f"local.get {res_tmp}")
-        
-    def _bind_pattern(self, pat, base_ptr, offset):
-        if isinstance(pat, RustiQParser.BindingPatContext):
-            sym = self.info.symbol.get(pat)
-            if sym:
-                lname = self.local_name(sym)
-                self.declare_local(lname, sym.type)
-                self.emit(f"local.get {base_ptr}")
-                if offset > 0:
-                    self.emit(f"i32.const {offset}")
-                    self.emit("i32.add")
-                self.emit("f64.load" if sym.type == F64 else "i32.load")
-                self.emit(f"local.set {lname}")
-        elif isinstance(pat, RustiQParser.TuplePatContext):
-            for i, sub_pat in enumerate(pat.pattern()):
-                self._bind_pattern(sub_pat, base_ptr, offset + i * 8)
-        elif isinstance(pat, RustiQParser.EnumPatContext):
-            if pat.patternList():
-                # El tag está en offset 0, el payload empieza en el offset 8
-                payload_offset = offset + 8
-                for i, sub_pat in enumerate(pat.patternList().pattern()):
-                    self._bind_pattern(sub_pat, base_ptr, payload_offset + i * 8)
+
+    # --- Patrones ---------------------------------------------------------------
+
+    def gen_pattern(self, pattern: RustiQParser.PatternContext, value: str, fail: str) -> None:
+        """Prueba `pattern` contra el valor del local `value`.
+
+        Si no calza salta a `fail`; si calza asigna sus bindings. No deja nada en la pila.
+        """
+        value_type = self.info.expr_type.get(pattern)
+        if isinstance(pattern, RustiQParser.BindingPatContext):
+            name = self.declare_symbol(self.info.symbol.get(pattern))
+            self.emit(f"local.get {value}")
+            self.emit(f"local.set {name}")
+        elif isinstance(pattern, RustiQParser.LiteralPatContext):
+            self.emit(f"local.get {value}")
+            self.visit(pattern.literal())
+            self.emit(f"{wasm_type(value_type)}.ne")
+            self.emit(f"br_if {fail}")
+        elif isinstance(pattern, RustiQParser.TuplePatContext):
+            for slot, sub in enumerate(pattern.pattern()):
+                self._gen_slot_pattern(value, slot, sub, fail)
+
+        elif isinstance(pattern, RustiQParser.EnumPatContext):
+            definition = self.info.enums[pattern.IDENT(0).getText()]
+            self.emit(f"local.get {value}")
+            self.emit(f"i32.load offset={slot_offset(0)}")
+            self.emit(f"i32.const {list(definition.variants.keys()).index(pattern.IDENT(1).getText())}")
+            self.emit("i32.ne")
+            self.emit(f"br_if {fail}")
+            subs = pattern.patternList().pattern() if pattern.patternList() is not None else []
+            for i, sub in enumerate(subs):
+                self._gen_slot_pattern(value, 1 + i, sub, fail)
+
+    def _gen_slot_pattern(self, pointer: str, slot: int, pattern: RustiQParser.PatternContext, fail: str) -> None:
+        """Carga la ranura `slot` del bloque en `pointer` y le prueba `pattern`."""
+        if isinstance(pattern, RustiQParser.WildcardPatContext):
+            return
+        slot_type = self.info.expr_type.get(pattern)
+        temp = self.new_temp(slot_type)
+        self.emit(f"local.get {pointer}")
+        self.emit(f"{wasm_type(slot_type)}.load offset={slot_offset(slot)}")
+        self.emit(f"local.set {temp}")
+        self.gen_pattern(pattern, temp, fail)

@@ -15,7 +15,7 @@ Wasm solo maneja números (`i32`, `f64`). Todo valor compuesto vive en la memori
 | `String` | Puntero a `[len: i32][bytes UTF-8]` |
 | Struct, tupla | Puntero a los campos en orden de declaración, cada uno en una ranura de 8 bytes |
 | Array | Puntero a `n` ranuras de 8 bytes |
-| Enum | Puntero a `[tag: i32][relleno][payload en ranuras de 8 bytes]`. El tag es el índice de la variante: 0, 1, 2... |
+| Enum | Puntero a `[tag: i32][relleno de 4 bytes][payload...]`. El tag y su relleno ocupan la ranura 0 (offset 0) y cada dato del payload una ranura de 8 bytes desde la 1 (offset 8, 16...). El tag es el índice de la variante: 0, 1, 2... Una variante sin datos ocupa 8 bytes |
 | Referencia (`&T`, `&mut T`) | `i32` con la dirección del valor |
 | Escalar con `&` aplicado | Vive en una celda del heap. El local guarda su dirección (`Symbol.address_taken`) |
 
@@ -46,5 +46,4 @@ Implementación en `rustiq/codegen/runtime.wat`. El Emitter la pega dentro de ca
 
 ## Pendiente
 
-- Tamaño exacto del relleno del enum y alineación del payload.
 - Si los literales de String superan los 1024 bytes, el inicio del heap tiene que moverse.

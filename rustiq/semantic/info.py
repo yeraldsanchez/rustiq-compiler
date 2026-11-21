@@ -53,6 +53,9 @@ class EnumDef:
     name: str
     variants: dict[str, tuple[Type, ...]]  # nombre -> tipos del payload; el tag es el índice
 
+    def tag_of(self, variant: str) -> int:
+        return list(self.variants).index(variant)
+
 
 @dataclass
 class FuncSig:
