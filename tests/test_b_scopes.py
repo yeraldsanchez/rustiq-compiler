@@ -154,3 +154,29 @@ def test_error_let_tipo_incompatible_con_inicializador():
     assert len(errors) == 1
     assert errors[0].phase == "semantico"
     assert errors[0].code == E_TYPE_MISMATCH
+
+# ---------------------------------------------------------------
+# Sin errores en cascada: una variable con error previo queda declarada
+# ---------------------------------------------------------------
+
+def test_variable_con_inicializador_erroneo_no_genera_cascada():
+    src = """
+    fn main() {
+        let a = nada;
+        let b = a;
+        let c = a;
+    }
+    """
+    _, errors = _analyze(src)
+    assert [e.code for e in errors] == [E_UNDECLARED]
+
+
+def test_let_sin_tipo_ni_inicializador_no_genera_cascada():
+    src = """
+    fn main() {
+        let x;
+        let y = x;
+    }
+    """
+    _, errors = _analyze(src)
+    assert [e.code for e in errors] == [E_TYPE_MISMATCH]
