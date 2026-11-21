@@ -14,7 +14,7 @@ from rustiq.errors import (
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import EnumDef
-from rustiq.types import BOOL, EnumT, TupleT, Type
+from rustiq.types import BOOL, EnumT, TupleT, Type, is_copy
 
 
 class MatchMixin:
@@ -24,6 +24,8 @@ class MatchMixin:
         enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
         args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
         arg_types = [self.visit(a) for a in args]  # siempre, para ver sus errores
+        for a in args:
+            self.consume(a)
         payload = self._variant_payload(ctx, enum_name, variant)
         if payload is None:
             return None
@@ -58,17 +60,25 @@ class MatchMixin:
             return None
         self.info.expr_type.put(ctx.condition(), scrutinee)
         result, patterns_ok = None, True
+        before, branches = self.branch_start(), []
         for arm in ctx.matchArm():
             self.info.expr_type.put(arm.pattern(), scrutinee)
+            self.branch_restore(before)
             self.push_scope()  # los bindings de un brazo solo existen en ese brazo
             pattern_ok = self.visit(arm.pattern()) is not None
             body = self.visit(arm.expression()) if pattern_ok else None
+            if pattern_ok:
+                self.consume(arm.expression())
             self.pop_scope()
+            branches.append(self.move_states)
             patterns_ok = patterns_ok and pattern_ok
             if result is None:
                 result = body
             else:
                 self.mismatch(arm.expression(), E_TYPE_MISMATCH, result, body, "El brazo de match")
+        self.branch_end(before, branches)
+        if binds_owned_value(self.info, [arm.pattern() for arm in ctx.matchArm()]):
+            self.consume(ctx.condition())
         if patterns_ok and not is_exhaustive([arm.pattern() for arm in ctx.matchArm()], scrutinee, self.info.enums):
             self.error(ctx.MATCH(), E_NOT_EXHAUSTIVE, f"El match sobre {scrutinee} no cubre todos los casos; agrega un brazo '_'")
         if result is not None:
@@ -89,6 +99,7 @@ class MatchMixin:
         if symbol is None:
             return None
         self.info.symbol.put(ctx, symbol)
+        self.track_symbol(symbol)
         return expected
 
     def visitLiteralPat(self, ctx: P.LiteralPatContext):
@@ -171,3 +182,16 @@ def is_exhaustive(patterns: list[P.PatternContext], scrutinee: Type, enums: dict
 
 def _enum_sub_patterns(pattern: P.EnumPatContext) -> list[P.PatternContext]:
     return pattern.patternList().pattern() if pattern.patternList() is not None else []
+
+
+def binds_owned_value(info, patterns: list[P.PatternContext]) -> bool:
+    """True si algún patrón liga un valor que no es Copy; solo así el match mueve su valor."""
+    pending = list(patterns)
+    while pending:
+        node = pending.pop()
+        if isinstance(node, P.BindingPatContext):
+            symbol = info.symbol.get(node)
+            if symbol is not None and not is_copy(symbol.type):
+                return True
+        pending.extend(c for c in (node.children or []) if isinstance(c, P.PatternContext) or isinstance(c, P.PatternListContext))
+    return False
