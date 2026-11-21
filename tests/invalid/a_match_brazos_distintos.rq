@@ -1,0 +1,10 @@
+// ERROR semantico E_TYPE_MISMATCH 8:14
+enum Forma { Punto, Cuadrado(i32) }
+enum Color { Rojo }
+fn crear() -> Forma { Forma::Punto }
+fn main() {
+    match crear() {
+        Forma::Punto => Forma::Punto,
+        _ => Color::Rojo,
+    };
+}

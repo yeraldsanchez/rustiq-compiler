@@ -1,0 +1,6 @@
+// ERROR semantico E_UNKNOWN_VARIANT 4:12
+enum Forma { Punto, Cuadrado(i32) }
+fn crear() -> Forma {
+    Forma::Circulo
+}
+fn main() {}

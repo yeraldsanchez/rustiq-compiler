@@ -83,6 +83,8 @@ class StructsMixin:
                     fi.expression(), E_TYPE_MISMATCH, definition.fields[fname], actual,
                     f"El campo '{fname}' de '{name}'",
                 )
+        for fi in inits:
+            self.consume(fi.expression())
         missing = [f for f in definition.fields if f not in seen]
         if missing:
             self.error(ctx.IDENT(), E_MISSING_FIELD, f"Faltan campos en '{name}': {', '.join(missing)}")
@@ -92,6 +94,8 @@ class StructsMixin:
 
     def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
         elems = [self.visit(e) for e in ctx.expression()]
+        for e in ctx.expression():
+            self.consume(e)
         if any(e is None for e in elems):
             return None
         result = TupleT(tuple(elems))

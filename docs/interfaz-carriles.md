@@ -51,6 +51,10 @@ lookup(name) -> Symbol | None
 | `info.expr_type[expresión de ExprStmt]` | Tipo, para que el Emitter descarte el valor |
 | `info.expr_type[block]`, `[structLiteral]`, `[tupleLiteral]`, `[postfix]` | Tipo del nodo |
 | `info.expr_type[sufijo]` | Tipo del **operando** del sufijo |
+| `info.expr_type[enumValue]`, `[matchExpr]` | Tipo del nodo |
+| `info.expr_type[matchExpr.condition()]` | Tipo del valor que examina el `match` |
+| `info.expr_type[patrón]` | Tipo del valor contra el que se prueba ese patrón (también en subpatrones) |
+| `info.symbol[bindingPat]` | `Symbol` del identificador que declara el patrón (inmutable, kind `"local"`) |
 
 ## Qué espera A de B
 
@@ -58,6 +62,19 @@ lookup(name) -> Symbol | None
 - `visitLetDecl` anota `info.symbol[ctx]` con el símbolo declarado.
 - Los literales, operadores unarios y binarios cumplen la convención de arriba.
 - Un parámetro se nombra por `uid` si `info.symbol[parameter]` existe. A lo llena en `visitFunctionDecl` con `declare(...)`.
+
+### Movimientos (`semantic/moves.py`)
+
+TODO(B): A ya lleva el estado de cada variable (disponible, movida, sin inicializar), las ramas (G8) y los ciclos. Faltan estas llamadas desde el código de B:
+
+| Dónde (B) | Llamada |
+| --- | --- |
+| `visitIdentP` (Analyzer) | `self.check_use(symbol, ctx)` después de anotar `info.symbol[ctx]` |
+| `visitLetDecl` | `self.consume(ctx.expression())` si tiene inicializador, y `self.track_symbol(symbol, initialized=ctx.expression() is not None)` |
+| `visitAssignment` con `=` | `self.consume(ctx.expression())` y luego `self.mark_initialized(symbol)` |
+| `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
+
+Y A espera de B `is_borrowed(symbol)` para reportar `E_MOVE_WHILE_BORROWED`. La llamada está como TODO(B) en `consume`. Las pruebas que dependen de todo esto están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
 
 ## Pruebas
 
