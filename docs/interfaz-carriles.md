@@ -51,6 +51,10 @@ lookup(name) -> Symbol | None
 | `info.expr_type[expresión de ExprStmt]` | Tipo, para que el Emitter descarte el valor |
 | `info.expr_type[block]`, `[structLiteral]`, `[tupleLiteral]`, `[postfix]` | Tipo del nodo |
 | `info.expr_type[sufijo]` | Tipo del **operando** del sufijo |
+| `info.expr_type[enumValue]`, `[matchExpr]` | Tipo del nodo |
+| `info.expr_type[matchExpr.condition()]` | Tipo del valor que examina el `match` |
+| `info.expr_type[patrón]` | Tipo del valor contra el que se prueba ese patrón (también en subpatrones) |
+| `info.symbol[bindingPat]` | `Symbol` del identificador que declara el patrón (inmutable, kind `"local"`) |
 
 ## Qué espera A de B
 
