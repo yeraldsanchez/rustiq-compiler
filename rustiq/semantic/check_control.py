@@ -22,6 +22,8 @@ class ControlMixin:
         for statement in ctx.statement():
             self.visit(statement)
         tail = self.visit(ctx.expression()) if ctx.expression() is not None else UNIT
+        if ctx.expression() is not None:
+            self.consume(ctx.expression())
         self.pop_scope()
         if tail is not None:
             self.info.expr_type.put(ctx, tail)
@@ -39,11 +41,16 @@ class ControlMixin:
 
     def visitIfStmt(self, ctx: RustiQParser.IfStmtContext):
         self._check_condition(ctx.condition())
-        blocks = ctx.block()
-        for block in blocks:
+        before, branches = self.branch_start(), []
+        for block in ctx.block():
+            self.branch_restore(before)
             self._check_statement_block(block, "Una rama de if")
+            branches.append(self.move_states)
         if ctx.ifStmt() is not None:
+            self.branch_restore(before)
             self.visit(ctx.ifStmt())
+            branches.append(self.move_states)
+        self.branch_end(before, branches)
 
     def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
         self._check_condition(ctx.condition())
@@ -87,6 +94,7 @@ class ControlMixin:
                 self.error(ctx, E_BAD_RETURN, f"Se debe devolver un valor de tipo {expected}")
             return
         actual = self.visit(ctx.expression())
+        self.consume(ctx.expression())
         if expected == UNIT:
             self.error(ctx.expression(), E_BAD_RETURN, "La función no devuelve ningún valor")
         else:

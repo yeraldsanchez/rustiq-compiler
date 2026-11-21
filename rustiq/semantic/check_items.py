@@ -127,6 +127,7 @@ class ItemsMixin:
                 symbol = self.declare(p.IDENT().getText(), ptype, p.MUT() is not None, "param", p.IDENT())
                 if symbol is not None:
                     self.info.symbol.put(p, symbol)
+                    self.track_symbol(symbol)
         self.fn_ret, self.loop_depth = sig.ret, 0
         body_type = self.visit(ctx.block())
         self.pop_scope()
@@ -179,4 +180,6 @@ class ItemsMixin:
         else:
             for arg, actual, (pname, ptype) in zip(args, arg_types, sig.params):
                 self.mismatch(arg, E_TYPE_MISMATCH, ptype, actual, f"Argumento '{pname}' de '{name}'")
+        for arg in args:
+            self.consume(arg)
         return sig.ret

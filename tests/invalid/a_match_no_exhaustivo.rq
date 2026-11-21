@@ -1,0 +1,9 @@
+// ERROR semantico E_NOT_EXHAUSTIVE 6:5
+enum Forma { Punto, Cuadrado(i32) }
+fn crear() -> Forma { Forma::Punto }
+fn nada() {}
+fn main() {
+    match crear() {
+        Forma::Punto => nada(),
+    }
+}

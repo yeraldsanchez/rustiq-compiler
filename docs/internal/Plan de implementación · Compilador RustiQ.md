@@ -281,11 +281,11 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 **A**
 
-- [ ] Enums: declaración, `Enum::Variante`, tag y payload. Tipos y codegen
-- [ ] Match: tipos de patrones, mismo tipo en todos los brazos, exhaustividad. Codegen sobre enums, literales, `_`, identificadores y tuplas
-- [ ] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`
-- [ ] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops
-- [ ] No mover un valor con préstamo activo, consultando `borrows`
+- [x] Enums: declaración, `Enum::Variante`, tag y payload. Tipos y codegen
+- [x] Match: tipos de patrones, mismo tipo en todos los brazos, exhaustividad. Codegen sobre enums, literales, `_`, identificadores y tuplas
+- [ ] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
+- [ ] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
+- [ ] No mover un valor con préstamo activo, consultando `borrows`. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
 - [x] ~~Copia de arrays y tuplas Copy con `memcpy`~~ Ya no hace falta: arrays y tuplas se mueven (G1)
 - [ ] Inválidos de sus características
 

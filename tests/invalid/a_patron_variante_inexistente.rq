@@ -1,0 +1,10 @@
+// ERROR semantico E_UNKNOWN_VARIANT 7:16
+enum Forma { Punto, Cuadrado(i32) }
+fn crear() -> Forma { Forma::Punto }
+fn nada() {}
+fn main() {
+    match crear() {
+        Forma::Circulo => nada(),
+        _ => nada(),
+    }
+}

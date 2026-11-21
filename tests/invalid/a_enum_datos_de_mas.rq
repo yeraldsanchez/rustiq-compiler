@@ -1,0 +1,6 @@
+// ERROR semantico E_ARG_COUNT 4:5
+enum Forma { Punto, Cuadrado(i32) }
+fn crear() -> Forma {
+    Forma::Punto(Forma::Punto)
+}
+fn main() {}
