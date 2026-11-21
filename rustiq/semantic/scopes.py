@@ -1,9 +1,116 @@
-"""Ámbitos y tabla de símbolos.
+"""Tabla de símbolos, resolución de ámbitos y declaraciones locales (Carril B)."""
 
-Dueño: B (Byron). Implementa solo los `visitX` de sus reglas; si necesita algo de
-otro mixin, llama su método público y nunca copia la lógica.
-"""
+from rustiq.errors import E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
+from rustiq.semantic.info import Symbol
+from rustiq.types import Type, UNIT
 
 
 class ScopesMixin:
-    pass
+    def _scopes_list(self) -> list[dict[str, Symbol]]:
+        return self.__dict__.setdefault("_scopes", [])
+
+    def push_scope(self) -> None:
+        self._scopes_list().append({})
+
+    def pop_scope(self) -> None:
+        self._scopes_list().pop()
+
+    def _is_redeclared_in_current_or_params(self, name: str) -> bool:
+        scopes = self._scopes_list()
+        if not scopes:
+            return False
+        if name in scopes[-1]:
+            return True
+        # En visitFunctionDecl, scopes[-2] contiene exclusivamente los parámetros y scopes[-1] el bloque del cuerpo.
+        # Si estamos en un bloque anidado más adentro, scopes[-2] ya no será exclusivo de parámetros.
+        if len(scopes) >= 3:
+            parent = scopes[-2]
+            if name in parent and parent[name].kind == "param" and all(s.kind == "param" for s in parent.values()):
+                return True
+        return False
+
+    def declare(self, name: str, type: Type, mutable: bool, kind: str, node) -> Symbol | None:
+        scopes = self._scopes_list()
+        if not scopes:
+            self.push_scope()
+        current = scopes[-1]
+
+        # Regla G2: prohibido redeclarar en el mismo ámbito (incluyendo parámetros en el cuerpo);
+        # permitido sombreado en bloques internos.
+        if self._is_redeclared_in_current_or_params(name):
+            self.error(node, E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
+            return None
+
+        uid = self.__dict__.get("_next_uid", 0)
+        self._next_uid = uid + 1
+        symbol = Symbol(uid=uid, name=name, type=type, mutable=mutable, kind=kind)
+        current[name] = symbol
+        return symbol
+
+    def lookup(self, name: str) -> Symbol | None:
+        for scope in reversed(self._scopes_list()):
+            if name in scope:
+                return scope[name]
+        return None
+
+    # ---------------------------------------------------------------
+    # Visitors de declaraciones locales e identificadores (Carril B)
+    # ---------------------------------------------------------------
+
+    def visitLetDecl(self, ctx):
+        name = ctx.IDENT().getText()
+        mutable = ctx.MUT() is not None
+
+        has_type_ann = ctx.type_() is not None
+        has_init = ctx.expression() is not None
+
+        # T4: solo falla por falta de inferencia si no hay NI tipo NI inicializador
+        if not has_type_ann and not has_init:
+            self.error(
+                ctx,
+                E_TYPE_MISMATCH,
+                f"No se puede inferir el tipo de '{name}' sin anotación ni inicializador",
+            )
+            return None
+
+        declared_type: Type | None = self.resolve_type(ctx.type_()) if has_type_ann else None
+        init_type: Type | None = self.visit(ctx.expression()) if has_init else None
+
+        final_type: Type | None = None
+        if has_type_ann and has_init:
+            if declared_type is not None:
+                self.mismatch(
+                    ctx.expression(),
+                    E_TYPE_MISMATCH,
+                    declared_type,
+                    init_type,
+                    f"Inicializador de '{name}'",
+                )
+            final_type = declared_type
+        elif has_type_ann:
+            final_type = declared_type
+        elif has_init:
+            if init_type == UNIT:
+                self.error(ctx, E_TYPE_MISMATCH, f"No se puede inferir el tipo de '{name}' desde '()'")
+                return None
+            final_type = init_type
+
+        if final_type is None:
+            if self._is_redeclared_in_current_or_params(name):
+                self.error(ctx.IDENT(), E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
+            return None
+
+        symbol = self.declare(name, final_type, mutable, "local", ctx.IDENT())
+        if symbol is not None:
+            self.info.symbol.put(ctx, symbol)
+        return None
+
+    def visitIdentP(self, ctx):
+        name = ctx.IDENT().getText()
+        symbol = self.lookup(name)
+        if symbol is None:
+            self.error(ctx.IDENT(), E_UNDECLARED, f"Identificador '{name}' no declarado")
+            return None
+
+        self.info.symbol.put(ctx, symbol)
+        return symbol.type
