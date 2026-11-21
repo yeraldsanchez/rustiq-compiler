@@ -124,3 +124,51 @@ def test_match_con_valor_erroneo_no_revisa_los_brazos():
     src = "fn f() -> i32 {\n    match nada { 1 => 1 }\n}\nfn main() {}"
     assert error_codes(src) == [(E_UNDECLARED, 2, 11)]
 
+
+
+# --- Tuplas --------------------------------------------------------------------
+
+
+def test_tupla_de_identificadores_es_exhaustiva():
+    f = "fn suma(p: (i32, i32)) -> i32 { match p { (a, b) => a + b } }"
+    assert run(_imprime(f, ["suma((3, 8))"])) == ["11"]
+
+
+def test_tupla_como_resultado_del_match():
+    src = """
+fn intercambiar(p: (i32, i32)) -> (i32, i32) { match p { (a, b) => (b, a) } }
+fn primero(p: (i32, i32)) -> i32 { match p { (a, _) => a } }
+fn main() { print_i32(primero(intercambiar((3, 8)))); }
+"""
+    assert run(src) == ["8"]
+
+
+def test_tupla_con_literales_y_comodines():
+    src = """
+fn clase(p: (i32, bool)) -> i32 { match p { (11, true) => 1, (_, false) => 2, _ => 3 } }
+fn main() { print_i32(clase((11, true))); print_i32(clase((5, false))); print_i32(clase((5, true))); }
+"""
+    assert run(src) == ["1", "2", "3"]
+
+
+def test_tupla_anidada_y_con_f64():
+    src = """
+fn f(p: ((i32, f64), bool)) -> f64 { match p { ((1, x), true) => x, ((_, y), _) => y * 2.0 } }
+fn main() { print_f64(f(((1, 1.5), true))); print_f64(f(((2, 1.5), true))); }
+"""
+    assert run(src) == ["1.5", "3.0"]
+
+
+def test_patron_de_tupla_sobre_entero():
+    src = "fn f(n: i32) -> i32 {\n    match n { (a, b) => a }\n}\nfn main() {}"
+    assert error_codes(src) == [(E_BAD_PATTERN, 2, 15)]
+
+
+def test_tupla_de_otra_aridad():
+    src = "fn f(p: (i32, i32)) -> i32 {\n    match p { (a, b, c) => a }\n}\nfn main() {}"
+    assert error_codes(src) == [(E_TYPE_MISMATCH, 2, 15)]
+
+
+def test_tupla_con_literal_sin_comodin_no_es_exhaustiva():
+    src = "fn f(p: (i32, i32)) -> i32 {\n    match p { (1, x) => x }\n}\nfn main() {}"
+    assert error_codes(src) == [(E_NOT_EXHAUSTIVE, 2, 5)]

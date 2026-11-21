@@ -13,7 +13,7 @@ from rustiq.errors import (
     E_UNKNOWN_VARIANT,
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.types import BOOL, EnumT, Type
+from rustiq.types import BOOL, EnumT, TupleT, Type
 
 
 class MatchMixin:
@@ -99,12 +99,36 @@ class MatchMixin:
             return None
         return expected
 
+    def visitTuplePat(self, ctx: P.TuplePatContext):
+        expected = self.info.expr_type.get(ctx)
+        subs = ctx.pattern()
+        if not isinstance(expected, TupleT):
+            self.error(ctx, E_BAD_PATTERN, f"Un patrón de tupla no sirve para un valor de tipo {expected}")
+            return None
+        if len(subs) != len(expected.elems):
+            self.error(
+                ctx, E_TYPE_MISMATCH,
+                f"El patrón tiene {len(subs)} elementos y la tupla {expected} tiene {len(expected.elems)}",
+            )
+            return None
+        return expected if self._check_sub_patterns(subs, expected.elems) else None
+
+    def _check_sub_patterns(self, subs: list[P.PatternContext], types) -> bool:
+        """Revisa cada subpatrón contra su tipo. True si todos son válidos."""
+        ok = True
+        for sub, sub_type in zip(subs, types):
+            self.info.expr_type.put(sub, sub_type)
+            ok = self.visit(sub) is not None and ok
+        return ok
+
 
 # --- Exhaustividad (decisión G10) ---------------------------------------------
 
 
 def is_irrefutable(pattern: P.PatternContext) -> bool:
     """True si el patrón calza con cualquier valor de su tipo."""
+    if isinstance(pattern, P.TuplePatContext):
+        return all(is_irrefutable(sub) for sub in pattern.pattern())
     return isinstance(pattern, (P.WildcardPatContext, P.BindingPatContext))
 
 

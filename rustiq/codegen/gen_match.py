@@ -75,3 +75,17 @@ class MatchGenMixin:
             self.visit(pattern.literal())
             self.emit(f"{wasm_type(value_type)}.ne")
             self.emit(f"br_if {fail}")
+        elif isinstance(pattern, P.TuplePatContext):
+            for slot, sub in enumerate(pattern.pattern()):
+                self._gen_slot_pattern(value, slot, sub, fail)
+
+    def _gen_slot_pattern(self, pointer: str, slot: int, pattern: P.PatternContext, fail: str) -> None:
+        """Carga la ranura `slot` del bloque en `pointer` y le prueba `pattern`."""
+        if isinstance(pattern, P.WildcardPatContext):
+            return
+        slot_type = self.info.expr_type.get(pattern)
+        temp = self.new_temp(slot_type)
+        self.emit(f"local.get {pointer}")
+        self.emit(f"{wasm_type(slot_type)}.load offset={slot_offset(slot)}")
+        self.emit(f"local.set {temp}")
+        self.gen_pattern(pattern, temp, fail)
