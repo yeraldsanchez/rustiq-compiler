@@ -1,0 +1,6 @@
+// ERROR semantico E_ASSIGN_WHILE_BORROWED 5:5
+fn main() {
+    let mut x: i32 = 10;
+    let r = &x;
+    x = 20;
+}

@@ -1,7 +1,7 @@
-"""Contrato 7: visitor principal del análisis semántico.
+"""Contrato 7: visitor principal del anÃ¡lisis semÃ¡ntico.
 
 Hereda un mixin por archivo. Cada mixin implementa solo los `visitX` de sus
-reglas. Esta clase aporta lo común: `info`, `errors` y `error()`.
+reglas. Esta clase aporta lo comÃºn: `info`, `errors` y `error()`.
 """
 
 from antlr4 import ParserRuleContext
@@ -26,17 +26,16 @@ from rustiq.types import Type
 
 
 class Analyzer(
-    ItemsMixin, StructsMixin, ControlMixin, MatchMixin, MovesMixin,  # A
+    ItemsMixin, StructsMixin, BorrowsMixin, ControlMixin, MatchMixin, MovesMixin,  # A/B
     ScopesMixin, ExprsMixin, ArraysMixin, RefsMixin,  # B
-    BorrowsMixin,  # B
-    ScopeDefaults,  # respaldo del contrato de ámbitos; ScopesMixin lo reemplaza
+    ScopeDefaults,  # respaldo del contrato de Ã¡mbitos; ScopesMixin lo reemplaza
     RustiQVisitor,
 ):
     def __init__(self) -> None:
         self.info = SemanticInfo()
         self.errors: list[CompileError] = []
         self.type_names: dict[str, Type] = {}  # structs y enums declarados
-        self.fn_ret: Type | None = None  # tipo de retorno de la función en análisis
+        self.fn_ret: Type | None = None  # tipo de retorno de la funciÃ³n en anÃ¡lisis
         self.loop_depth = 0  # ciclos abiertos, para break y continue
 
     def analyze(self, tree) -> tuple[SemanticInfo, list[CompileError]]:
@@ -44,14 +43,14 @@ class Analyzer(
         return self.info, self.errors
 
     def error(self, node, code: str, message: str) -> None:
-        """Registra un error semántico en la posición del nodo."""
+        """Registra un error semÃ¡ntico en la posiciÃ³n del nodo."""
         self.errors.append(
             CompileError(SEMANTICO, code, message, *self._position(node))
         )
 
     @staticmethod
     def _position(node) -> tuple[int, int, int]:
-        """(línea desde 1, columna desde 1, largo) del nodo."""
+        """(lÃ­nea desde 1, columna desde 1, largo) del nodo."""
         if isinstance(node, TerminalNode):
             token = node.symbol
             return token.line, token.column + 1, len(token.text)
@@ -65,10 +64,10 @@ class Analyzer(
 
     # --- Espina compartida de `postfix` ------------------------------------
     #
-    # Convención: todo `visitX` de expresión devuelve su `Type` (None si ya hubo
+    # ConvenciÃ³n: todo `visitX` de expresiÃ³n devuelve su `Type` (None si ya hubo
     # un error que lo impide). Cada sufijo recibe el tipo del operando en
     # `info.expr_type[sufijo]` y devuelve el tipo del resultado.
-    #   - visitCallSuffix: A (solo llamadas por nombre se resuelven aquí)
+    #   - visitCallSuffix: A (solo llamadas por nombre se resuelven aquÃ­)
     #   - visitFieldSuffix: A
     #   - visitIndexSuffix: B
 
@@ -98,5 +97,5 @@ class Analyzer(
         """Registra un error si los tipos difieren. Si `actual` es None (error previo) calla."""
         if actual is None or actual == expected:
             return False
-        self.error(node, code, f"{what}: se esperaba {expected} y se encontró {actual}")
+        self.error(node, code, f"{what}: se esperaba {expected} y se encontrÃ³ {actual}")
         return True

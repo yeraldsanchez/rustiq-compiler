@@ -59,3 +59,9 @@ class StructsGenMixin:
     def visitFieldSuffix(self, ctx: RustiQParser.FieldSuffixContext):
         index, field_type = self.field_slot(self.info.expr_type.get(ctx), ctx.IDENT().getText())
         self.emit(f"{wasm_type(field_type)}.load offset={slot_offset(index)}")
+
+    def visitStructP(self, ctx: RustiQParser.StructPContext):
+        self.visit(ctx.structLiteral())
+
+    def visitTupleP(self, ctx: RustiQParser.TuplePContext):
+        self.visit(ctx.tupleLiteral())

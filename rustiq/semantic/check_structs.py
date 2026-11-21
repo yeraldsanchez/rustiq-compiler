@@ -66,12 +66,16 @@ class StructsMixin:
         name = ctx.IDENT().getText()
         definition = self.info.structs.get(name)
         inits = ctx.fieldInit()
-        types = [self.visit(fi.expression()) for fi in inits]  # siempre, para ver sus errores
+        
         if definition is None:
             self.error(ctx.IDENT(), E_UNKNOWN_TYPE, f"El struct '{name}' no existe")
+            for fi in inits: 
+                self.visit(fi.expression())
             return None
+
         seen = set()
-        for fi, actual in zip(inits, types):
+        # 1. Verificar campos inexistentes o duplicados
+        for fi in inits:
             fname = fi.IDENT().getText()
             if fname not in definition.fields:
                 self.error(fi.IDENT(), E_UNKNOWN_FIELD, f"'{name}' no tiene el campo '{fname}'")
@@ -79,13 +83,22 @@ class StructsMixin:
                 self.error(fi.IDENT(), E_REDECLARED, f"El campo '{fname}' está repetido")
             else:
                 seen.add(fname)
+
+        # 2. Verificar campos faltantes ANTES de evaluar los tipos
+        missing = [f for f in definition.fields if f not in seen]
+        if missing:
+            self.error(ctx.IDENT(), E_MISSING_FIELD, f"Faltan campos en '{name}': {', '.join(missing)}")
+
+        # 3. Evaluar expresiones y verificar tipos
+        for fi in inits:
+            fname = fi.IDENT().getText()
+            actual = self.visit(fi.expression())
+            if fname in definition.fields:
                 self.mismatch(
                     fi.expression(), E_TYPE_MISMATCH, definition.fields[fname], actual,
                     f"El campo '{fname}' de '{name}'",
                 )
-        missing = [f for f in definition.fields if f not in seen]
-        if missing:
-            self.error(ctx.IDENT(), E_MISSING_FIELD, f"Faltan campos en '{name}': {', '.join(missing)}")
+
         result = StructT(name)
         self.info.expr_type.put(ctx, result)
         return result

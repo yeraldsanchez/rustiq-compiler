@@ -1,0 +1,6 @@
+// ERROR semantico E_BORROW_CONFLICT 5:14
+fn main() {
+    let mut x: i32 = 10;
+    let r1 = &x;
+    let r2 = &mut x;
+}
