@@ -79,6 +79,17 @@ class MatchGenMixin:
             for slot, sub in enumerate(pattern.pattern()):
                 self._gen_slot_pattern(value, slot, sub, fail)
 
+        elif isinstance(pattern, P.EnumPatContext):
+            definition = self.info.enums[pattern.IDENT(0).getText()]
+            self.emit(f"local.get {value}")
+            self.emit(f"i32.load offset={slot_offset(TAG_SLOT)}")
+            self.emit(f"i32.const {definition.tag_of(pattern.IDENT(1).getText())}")
+            self.emit("i32.ne")
+            self.emit(f"br_if {fail}")
+            subs = pattern.patternList().pattern() if pattern.patternList() is not None else []
+            for i, sub in enumerate(subs):
+                self._gen_slot_pattern(value, PAYLOAD_FIRST_SLOT + i, sub, fail)
+
     def _gen_slot_pattern(self, pointer: str, slot: int, pattern: P.PatternContext, fail: str) -> None:
         """Carga la ranura `slot` del bloque en `pointer` y le prueba `pattern`."""
         if isinstance(pattern, P.WildcardPatContext):

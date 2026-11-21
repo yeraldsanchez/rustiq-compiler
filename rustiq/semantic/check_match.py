@@ -13,6 +13,7 @@ from rustiq.errors import (
     E_UNKNOWN_VARIANT,
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.info import EnumDef
 from rustiq.types import BOOL, EnumT, TupleT, Type
 
 
@@ -68,7 +69,7 @@ class MatchMixin:
                 result = body
             else:
                 self.mismatch(arm.expression(), E_TYPE_MISMATCH, result, body, "El brazo de match")
-        if patterns_ok and not is_exhaustive([arm.pattern() for arm in ctx.matchArm()], scrutinee):
+        if patterns_ok and not is_exhaustive([arm.pattern() for arm in ctx.matchArm()], scrutinee, self.info.enums):
             self.error(ctx.MATCH(), E_NOT_EXHAUSTIVE, f"El match sobre {scrutinee} no cubre todos los casos; agrega un brazo '_'")
         if result is not None:
             self.info.expr_type.put(ctx, result)
@@ -113,6 +114,26 @@ class MatchMixin:
             return None
         return expected if self._check_sub_patterns(subs, expected.elems) else None
 
+    def visitEnumPat(self, ctx: P.EnumPatContext):
+        expected = self.info.expr_type.get(ctx)
+        enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
+        subs = _enum_sub_patterns(ctx)
+        payload = self._variant_payload(ctx, enum_name, variant)
+        if payload is None:
+            return None
+        if not isinstance(expected, EnumT):
+            self.error(ctx, E_BAD_PATTERN, f"Un patrón de enum no sirve para un valor de tipo {expected}")
+            return None
+        if self.mismatch(ctx, E_TYPE_MISMATCH, expected, EnumT(enum_name), "El patrón"):
+            return None
+        if len(subs) != len(payload):
+            self.error(
+                ctx, E_ARG_COUNT,
+                f"'{enum_name}::{variant}' tiene {len(payload)} dato(s) y el patrón {len(subs)}",
+            )
+            return None
+        return expected if self._check_sub_patterns(subs, payload) else None
+
     def _check_sub_patterns(self, subs: list[P.PatternContext], types) -> bool:
         """Revisa cada subpatrón contra su tipo. True si todos son válidos."""
         ok = True
@@ -132,10 +153,21 @@ def is_irrefutable(pattern: P.PatternContext) -> bool:
     return isinstance(pattern, (P.WildcardPatContext, P.BindingPatContext))
 
 
-def is_exhaustive(patterns: list[P.PatternContext], scrutinee: Type) -> bool:
+def is_exhaustive(patterns: list[P.PatternContext], scrutinee: Type, enums: dict[str, EnumDef]) -> bool:
     if any(is_irrefutable(p) for p in patterns):
         return True
+    if isinstance(scrutinee, EnumT):
+        covered = {
+            p.IDENT(1).getText()
+            for p in patterns
+            if isinstance(p, P.EnumPatContext) and all(is_irrefutable(sub) for sub in _enum_sub_patterns(p))
+        }
+        return covered >= set(enums[scrutinee.name].variants)
     if scrutinee == BOOL:
         texts = {p.getText() for p in patterns if isinstance(p, P.LiteralPatContext)}
         return {"true", "false"} <= texts
     return False
+
+
+def _enum_sub_patterns(pattern: P.EnumPatContext) -> list[P.PatternContext]:
+    return pattern.patternList().pattern() if pattern.patternList() is not None else []
