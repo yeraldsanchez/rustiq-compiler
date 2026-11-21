@@ -19,7 +19,7 @@ Criterio del grupo (16 de noviembre de 2026): en cada decisión abierta se elige
 | G8 | Movimientos en ramas y ciclos | Cada rama de un `if` empieza con el estado de antes del `if`. Después del `if`, la variable queda movida si se movió en cualquier rama. Reponerla dentro de una rama no cuenta, solo fuera del `if`. Mover dentro de un ciclo una variable declarada fuera de él es error | confirmado |
 | G9 | Duración de los préstamos | Un préstamo guardado en una variable dura hasta el fin del bloque donde se declaró esa variable. Un préstamo temporal, como `f(&mut v)`, dura solo esa sentencia. Sin análisis de último uso | confirmado |
 | G10 | Patrones anidados | Se permiten a cualquier profundidad, como dice la gramática. Un `match` es exhaustivo si tiene un brazo `_` o identificador; si es sobre un enum y aparecen todas sus variantes con subpatrones `_` o identificadores; o si es sobre `bool` y aparecen `true` y `false`. En cualquier otro caso se exige `_` | confirmado |
-| G11 | Detalles de `match` | Una tupla de patrones `_` o identificadores también es irrefutable, así que `match p { (a, b) => ... }` es exhaustivo. Un identificador en un patrón siempre declara una variable nueva, aunque se llame como una constante. Un literal `String` no se acepta como patrón (G4). Los brazos repetidos o inalcanzables no se reportan. Un `match` sobre `&Enum` solo acepta `_` o un identificador hasta que existan las referencias | por defecto |
+| G11 | Detalles de `match` | Una tupla de patrones `_` o identificadores también es irrefutable, así que `match p { (a, b) => ... }` es exhaustivo. Un identificador en un patrón siempre declara una variable nueva, aunque se llame como una constante. Un literal `String` no se acepta como patrón (G4). Los brazos repetidos o inalcanzables no se reportan. Un `match` sobre `&Enum` solo acepta `_` o un identificador hasta que existan las referencias. Un `match` sobre una variable la mueve solo si algún patrón liga un valor que no es Copy | por defecto |
 | G4 | Alcance de `String` | Crear, mover, pasar, retornar e imprimir. Sin concatenación ni comparación | confirmado (P9) |
 
 ## Puntos para el profesor
@@ -68,4 +68,5 @@ _Por completar._
 - Un `match` con patrones anidados refutables necesita un brazo `_` (G10). Rust calcula la exhaustividad exacta.
 - Un brazo de `match` cuyo cuerpo termina en `return` o `break` tiene tipo `()`, porque RustiQ no tiene el tipo `!` de Rust. Si los otros brazos producen un valor, es error de tipos.
 - Rust avisa de brazos inalcanzables en un `match`; RustiQ no.
+- Mover dentro de un ciclo una variable declarada fuera es error aunque después venga `break` o `return` (G8). Rust lo permite si el ciclo no vuelve a usarla.
 - No hay liberación de memoria (`drop`).

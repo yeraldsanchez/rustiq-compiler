@@ -63,6 +63,19 @@ lookup(name) -> Symbol | None
 - Los literales, operadores unarios y binarios cumplen la convención de arriba.
 - Un parámetro se nombra por `uid` si `info.symbol[parameter]` existe. A lo llena en `visitFunctionDecl` con `declare(...)`.
 
+### Movimientos (`semantic/moves.py`)
+
+TODO(B): A ya lleva el estado de cada variable (disponible, movida, sin inicializar), las ramas (G8) y los ciclos. Faltan estas llamadas desde el código de B:
+
+| Dónde (B) | Llamada |
+| --- | --- |
+| `visitIdentP` (Analyzer) | `self.check_use(symbol, ctx)` después de anotar `info.symbol[ctx]` |
+| `visitLetDecl` | `self.consume(ctx.expression())` si tiene inicializador, y `self.track_symbol(symbol, initialized=ctx.expression() is not None)` |
+| `visitAssignment` con `=` | `self.consume(ctx.expression())` y luego `self.mark_initialized(symbol)` |
+| `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
+
+Y A espera de B `is_borrowed(symbol)` para reportar `E_MOVE_WHILE_BORROWED`. La llamada está como TODO(B) en `consume`. Las pruebas que dependen de todo esto están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
+
 ## Pruebas
 
 `tests/support.py` trae literales, identificadores, operadores, `let` y asignación simple **solo para probar el carril A**. Cuando B implemente `visitLiteral` en ambos visitors, `B_READY` pasa a `True` y se activan solas las pruebas que compilan los `.rq` completos.
