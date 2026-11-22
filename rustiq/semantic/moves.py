@@ -28,7 +28,7 @@ TODO(B): llamadas que faltan desde el código de B (Byron):
 
 from antlr4 import ParserRuleContext
 
-from rustiq.errors import E_UNINITIALIZED, E_USE_AFTER_MOVE
+from rustiq.errors import E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import is_copy
 
@@ -71,10 +71,14 @@ class MovesMixin:
             return
         if self.move_state(symbol) != AVAILABLE:
             return  # check_use ya reportó el error
-        # TODO(B): no mover un valor con préstamo activo. Cuando exista `is_borrowed`:
-        #     if self.is_borrowed(symbol):
-        #         self.error(ident, E_MOVE_WHILE_BORROWED, f"'{symbol.name}' no se puede mover mientras está prestado")
-        #         return
+        # Si el símbolo está prestado, no se permite moverlo.
+        if hasattr(self, "is_borrowed") and self.is_borrowed(symbol):
+            self.error(
+                ident,
+                E_MOVE_WHILE_BORROWED,
+                f"'{symbol.name}' no se puede mover mientras está prestado",
+            )
+            return
         declared_in = self.move_loop_depth.get(symbol.uid)
         if declared_in is not None and declared_in < self.loop_depth:
             self.error(

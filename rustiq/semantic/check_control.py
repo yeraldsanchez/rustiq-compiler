@@ -33,6 +33,8 @@ class ControlMixin:
         actual = self.visit(ctx.expression())
         if actual is not None:
             self.info.expr_type.put(ctx.expression(), actual)  # el codegen descarta el valor
+        if hasattr(self, "clear_temporary_borrows"):
+            self.clear_temporary_borrows()
 
     def visitBlockS(self, ctx: RustiQParser.BlockSContext):
         self._check_statement_block(ctx.block(), "Un bloque usado como sentencia")
