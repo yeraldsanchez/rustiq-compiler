@@ -1,5 +1,5 @@
 /** Tema de CodeMirror con los tokens de color de styles.css, para que el
- *  editor y el resto de la interfaz cambien juntos. */
+ *  editor, la vista del WAT y el resto de la interfaz cambien juntos. */
 
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
@@ -58,16 +58,26 @@ const chrome = EditorView.theme(
       fontSize: "11.5px",
       opacity: "1",
     },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "var(--font-mono)",
+      fontSize: "12.5px",
+      maxHeight: "16em",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li": { padding: "2px 10px 2px 6px" },
     ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
       backgroundColor: "var(--accent)",
       color: "var(--accent-ink)",
     },
+    ".cm-completionIcon": { width: "1.4em", opacity: "0.7" },
+    ".cm-completionDetail": { marginLeft: "1em", fontStyle: "normal", color: "var(--muted)" },
+    "li[aria-selected] .cm-completionDetail": { color: "inherit" },
+    ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700" },
     ".cm-panels": { backgroundColor: "var(--tile-2)", color: "var(--text)" },
   },
   { dark: true },
 );
 
-const highlight = HighlightStyle.define([
+const rustHighlight = HighlightStyle.define([
   { tag: [t.keyword, t.definitionKeyword, t.controlKeyword, t.modifier, t.operatorKeyword], color: "var(--kw)" },
   { tag: [t.typeName, t.standard(t.typeName)], color: "var(--ty)" },
   { tag: [t.function(t.variableName), t.function(t.definition(t.variableName))], color: "var(--fn)" },
@@ -76,4 +86,18 @@ const highlight = HighlightStyle.define([
   { tag: [t.lineComment, t.blockComment], color: "var(--muted)", fontStyle: "italic" },
 ]);
 
-export const rustiqTheme = [chrome, syntaxHighlighting(highlight)];
+// En WAT casi todo es instrucción (`keyword`), así que va en el color base y
+// se destacan los nombres `$x`, los tipos y los números.
+const watHighlight = HighlightStyle.define([
+  { tag: t.keyword, color: "var(--kw)" },
+  { tag: t.typeName, color: "var(--ty)" },
+  { tag: t.variableName, color: "var(--fn)" },
+  { tag: t.number, color: "var(--num)" },
+  { tag: t.string, color: "var(--ok)" },
+  { tag: [t.lineComment, t.blockComment], color: "var(--muted)", fontStyle: "italic" },
+  { tag: t.paren, color: "var(--muted)" },
+]);
+
+export const editorChrome = chrome;
+export const rustHighlighting = syntaxHighlighting(rustHighlight);
+export const watHighlighting = syntaxHighlighting(watHighlight);

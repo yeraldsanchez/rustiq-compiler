@@ -10,7 +10,8 @@ import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 
 import { PHASE_LABEL, type CompileError } from "../types";
-import { rustiqTheme } from "./theme";
+import { rustiqCompletion } from "./completion";
+import { editorChrome, rustHighlighting } from "./theme";
 
 // Sangría de 4 espacios, como en Rust.
 const INDENT = "    ";
@@ -50,7 +51,9 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
       rust(),
       indentUnit.of(INDENT),
       lintGutter(),
-      rustiqTheme,
+      rustiqCompletion,
+      editorChrome,
+      rustHighlighting,
       shortcuts,
       EditorView.updateListener.of((update) => {
         if (update.docChanged) callbacks.onChange(update.state.doc.toString());
