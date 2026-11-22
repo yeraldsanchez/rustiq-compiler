@@ -7,7 +7,7 @@ reglas. Esta clase aporta lo común: `info`, `errors` y `error()`.
 from antlr4 import ParserRuleContext
 from antlr4.tree.Tree import TerminalNode
 
-from rustiq.errors import E_NOT_CALLABLE, SEMANTICO, CompileError
+from rustiq.errors import E_NOT_CALLABLE, E_TYPE_MISMATCH, SEMANTICO, CompileError
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.semantic.borrows import BorrowsMixin
@@ -23,7 +23,7 @@ from rustiq.semantic.info import SemanticInfo
 from rustiq.semantic.moves import MovesMixin
 from rustiq.semantic.scope_defaults import ScopeDefaults
 from rustiq.semantic.scopes import ScopesMixin
-from rustiq.types import Type
+from rustiq.types import UNIT, Type
 
 
 class Analyzer(
@@ -99,6 +99,13 @@ class Analyzer(
     def visitCallSuffix(self, ctx: RustiQParser.CallSuffixContext):
         self.error(ctx, E_NOT_CALLABLE, "Solo se pueden llamar funciones por su nombre")
         return None
+
+    def reject_unit(self, node, actual: Type | None, what: str) -> Type | None:
+        """`()` no es un valor que se pueda guardar, prestar ni inspeccionar."""
+        if actual == UNIT:
+            self.error(node, E_TYPE_MISMATCH, f"{what} no puede ser '()'; la expresión no produce un valor")
+            return None
+        return actual
 
     def mismatch(self, node, code: str, expected: Type, actual: Type | None, what: str) -> bool:
         """Registra un error si los tipos difieren. Si `actual` es None (error previo) calla."""

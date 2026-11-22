@@ -1,0 +1,9 @@
+// ERROR semantico E_DANGLING_REF 6:14
+fn main() {
+    let r: &i32;
+    {
+        let x = 5;
+        r = &x;
+    }
+    print_i32(*r);
+}

@@ -4,8 +4,6 @@
 
 RustiQ es un compilador que toma un subconjunto de Rust y lo convierte en **WebAssembly**, con un editor web para escribir, compilar y ejecutar tu código al instante, sin instalar nada.
 
-> 🚧 En desarrollo activo.
-
 ## ✨ Qué ofrece
 
 - **Un lenguaje familiar:** funciones, structs, enums, tuplas, arrays, `match`, inferencia de tipos y mutabilidad explícita.
@@ -104,6 +102,14 @@ python --version               # 3.12.x
 python -m pytest
 ```
 
+### Generar las evidencias
+
+```bash
+python -m scripts.evidencias
+```
+
+Compila todos los programas de `tests/valid` y `tests/invalid` y escribe `evidencias/`: por cada programa válido, su `.wat`, su `.wasm`, la salida de `wasm-validate` y la salida de la ejecución; por cada inválido, el error que da y que no produjo módulo. `evidencias/RESUMEN.md` junta todo en una tabla.
+
 ### Levantar el servidor
 
 ```bash
@@ -145,3 +151,10 @@ uv export --no-hashes -o requirements.txt
 
 Se suben `pyproject.toml`, `uv.lock` y `requirements.txt` juntos.
 
+
+## 📚 Documentación
+
+- [`docs/decisiones.md`](docs/decisiones.md): qué se soporta, qué es parcial, qué no se soporta y en qué se diferencia RustiQ de Rust.
+- [`docs/memoria.md`](docs/memoria.md): representación en memoria de `String`, arrays, tuplas, structs, enums y referencias.
+- [`tests/README.md`](tests/README.md): formato de los programas de prueba válidos e inválidos.
+- [`evidencias/RESUMEN.md`](evidencias/RESUMEN.md): resultado de compilar, validar y ejecutar cada programa de prueba.

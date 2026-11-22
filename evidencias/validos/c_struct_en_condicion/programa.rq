@@ -1,0 +1,26 @@
+// Dentro de (), [], {} o los argumentos de una llamada, un struct literal
+// sí puede ir en la condición de if/while o en el valor de match.
+struct Punto {
+    x: i32,
+    y: i32,
+}
+
+fn suma(p: Punto) -> i32 {
+    p.x + p.y
+}
+
+fn main() {
+    if suma(Punto { x: 1, y: 2 }) == 3 {
+        print_i32(1);
+    }
+    if {
+        let p = Punto { x: 5, y: 5 };
+        p.x == p.y
+    } {
+        print_i32(2);
+    }
+    match suma(Punto { x: 10, y: 20 }) {
+        30 => print_i32(3),
+        _ => print_i32(0),
+    };
+}

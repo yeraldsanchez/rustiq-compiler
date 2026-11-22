@@ -1,0 +1,8 @@
+// ERROR semantico E_UNINITIALIZED 7:15
+fn main() {
+    let x: i32;
+    if 3 > 2 {
+        x = 1;
+    }
+    print_i32(x);
+}

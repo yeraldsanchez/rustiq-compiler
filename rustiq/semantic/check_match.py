@@ -14,7 +14,8 @@ from rustiq.errors import (
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import EnumDef
-from rustiq.types import BOOL, EnumT, TupleT, Type, is_copy
+from rustiq.semantic.flow import expression_diverges
+from rustiq.types import BOOL, UNIT, EnumT, TupleT, Type, is_copy
 
 
 class MatchMixin:
@@ -23,9 +24,7 @@ class MatchMixin:
     def visitEnumValue(self, ctx: P.EnumValueContext):
         enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
         args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
-        arg_types = [self.visit(a) for a in args]  # siempre, para ver sus errores
-        for a in args:
-            self.consume(a)
+        arg_types = self.visit_and_consume(args)
         payload = self._variant_payload(ctx, enum_name, variant)
         if payload is None:
             return None
@@ -55,7 +54,7 @@ class MatchMixin:
     # --- match ------------------------------------------------------------------
 
     def visitMatchExpr(self, ctx: P.MatchExprContext):
-        scrutinee = self.visit(ctx.condition())
+        scrutinee = self.reject_unit(ctx.condition(), self.visit(ctx.condition()), "El valor de match")
         if scrutinee is None:
             return None
         self.info.expr_type.put(ctx.condition(), scrutinee)
@@ -72,11 +71,15 @@ class MatchMixin:
             self.pop_scope()
             branches.append(self.move_states)
             patterns_ok = patterns_ok and pattern_ok
+            if expression_diverges(arm.expression()):
+                continue  # `{ return v; }` no produce valor: no fija el tipo del match
             if result is None:
                 result = body
             else:
                 self.mismatch(arm.expression(), E_TYPE_MISMATCH, result, body, "El brazo de match")
-        self.branch_end(before, branches)
+        if result is None and patterns_ok and all(expression_diverges(a.expression()) for a in ctx.matchArm()):
+            result = UNIT
+        self.branch_end(before, branches, exhaustive=True)
         if binds_owned_value(self.info, [arm.pattern() for arm in ctx.matchArm()]):
             self.consume(ctx.condition())
         if patterns_ok and not is_exhaustive([arm.pattern() for arm in ctx.matchArm()], scrutinee, self.info.enums):

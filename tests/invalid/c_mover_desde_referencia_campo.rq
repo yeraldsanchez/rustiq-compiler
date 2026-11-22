@@ -1,0 +1,10 @@
+// ERROR semantico E_MOVE_OUT_OF_PLACE 9:11
+struct Caja {
+    s: String,
+}
+fn tomar(s: String) {}
+
+fn main() {
+    let c = Caja { s: "hola" };
+    tomar((&c).s);
+}

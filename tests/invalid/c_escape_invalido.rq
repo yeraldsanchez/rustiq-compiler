@@ -1,0 +1,4 @@
+// ERROR lexico E_INVALID_ESCAPE 3:19
+fn main() {
+    print_str("uno\qdos");
+}

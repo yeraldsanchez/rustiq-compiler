@@ -11,7 +11,7 @@ from pathlib import Path
 from rustiq.codegen.gen_arrays import ArraysGenMixin
 from rustiq.codegen.gen_control import ControlGenMixin
 from rustiq.codegen.gen_exprs import ExprsGenMixin
-from rustiq.codegen.gen_items import ItemsGenMixin
+from rustiq.codegen.gen_items import ItemsGenMixin, function_name
 from rustiq.codegen.gen_match import MatchGenMixin
 from rustiq.codegen.gen_refs import RefsGenMixin
 from rustiq.codegen.gen_structs import StructsGenMixin
@@ -19,11 +19,17 @@ from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.semantic.flow import block_tail, expression_diverges
 from rustiq.semantic.info import SemanticInfo, Symbol
 from rustiq.types import I32, UNIT, Type
 
 INDENT = "  "
 CELL_SIZE = 8  # una celda guarda un escalar (i32 o f64)
+PAGE_SIZE = 65536
+HEAP_ALIGN = 8
+# Línea del runtime que fija el inicio del heap; se reescribe si los literales no caben.
+HEAP_GLOBAL = "(global $heap (mut i32) (i32.const 1024))"
+DEFAULT_HEAP_START = 1024
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
@@ -143,16 +149,33 @@ class Emitter(
         self._depth += 1
         for name, param_type in HOST_FUNCTIONS:
             self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
+        memory_line = len(self._lines)
         self.emit('(memory (export "memory") 1)')
+        heap_line = None
         for line in RUNTIME_WAT.splitlines():
+            if line.strip() == HEAP_GLOBAL:
+                heap_line = len(self._lines)
             self.emit(line)
         self.visit(tree)
+        self._place_heap(memory_line, heap_line)
         for offset, data in self._data_segments:
             escaped = "".join(f"\\{b:02x}" for b in data)
             self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self._depth -= 1
         self.emit(")")
         return "\n".join(self._lines) + "\n"
+
+    def _place_heap(self, memory_line: int, heap_line: int | None) -> None:
+        """El heap empieza después de los literales: en 1024 o más allá si no caben."""
+        aligned = -(-self._data_offset // HEAP_ALIGN) * HEAP_ALIGN
+        heap_start = max(DEFAULT_HEAP_START, aligned)
+        if heap_start == DEFAULT_HEAP_START:
+            return
+        assert heap_line is not None, "runtime.wat sin la global $heap"
+        pages = -(-heap_start // PAGE_SIZE)
+        indent = INDENT * self._depth
+        self._lines[memory_line] = f'{indent}(memory (export "memory") {pages})'
+        self._lines[heap_line] = f"{indent}(global $heap (mut i32) (i32.const {heap_start}))"
 
     def visitProgram(self, ctx: RustiQParser.ProgramContext):
         for item in ctx.item():
@@ -178,7 +201,8 @@ class Emitter(
         outer_depth, self._depth = self._depth, self._depth + 1
         self._box_params(ctx)
         self.visit(ctx.block())
-        if sig.ret != UNIT and ctx.block().expression() is None:
+        tail = block_tail(ctx.block())
+        if sig.ret != UNIT and (tail is None or expression_diverges(tail)):
             # Sin expresión final, todos los caminos terminan en return o en un loop sin
             # salida (lo garantiza el análisis). `unreachable` cierra el tipo de la función.
             self.emit("unreachable")
@@ -186,7 +210,7 @@ class Emitter(
         self._depth = outer_depth
 
         params = self._param_names(ctx, sig)
-        header = f"(func ${name}"
+        header = f"(func {function_name(name)}"
         if name == "main":
             header += ' (export "main")'
         for pname, (_, ptype) in zip(params, sig.params):

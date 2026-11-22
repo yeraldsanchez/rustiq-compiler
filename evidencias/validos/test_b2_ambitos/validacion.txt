@@ -1,0 +1,2 @@
+$ wasm-validate modulo.wasm
+código de salida: 0

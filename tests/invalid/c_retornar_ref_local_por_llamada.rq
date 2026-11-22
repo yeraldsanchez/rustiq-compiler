@@ -1,0 +1,11 @@
+// ERROR semantico E_RETURN_LOCAL_REF 8:5
+fn mismo(a: &i32) -> &i32 {
+    a
+}
+
+fn crear() -> &i32 {
+    let x = 1;
+    mismo(&x)
+}
+
+fn main() {}

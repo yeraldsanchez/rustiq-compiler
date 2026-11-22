@@ -1,0 +1,7 @@
+// ERROR semantico E_USE_AFTER_MOVE 6:15
+fn juntar(a: String, b: String) {}
+
+fn main() {
+    let s = "hola";
+    juntar(s, s);
+}

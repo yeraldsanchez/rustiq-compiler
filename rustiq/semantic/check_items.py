@@ -19,7 +19,7 @@ from rustiq.errors import (
     E_UNKNOWN_TYPE,
 )
 from rustiq.generated.RustiQParser import RustiQParser
-from rustiq.semantic.flow import block_diverges
+from rustiq.semantic.flow import block_diverges, block_tail, expression_diverges
 from rustiq.semantic.info import FuncSig
 from rustiq.types import (
     BOOL,
@@ -34,6 +34,7 @@ from rustiq.types import (
     Type,
 )
 
+HOST_NAMES = {name for name, _ in HOST_FUNCTIONS}
 PRIMITIVES = {"i32": I32, "f64": F64, "bool": BOOL, "char": CHAR}
 MAIN = "main"
 
@@ -130,14 +131,16 @@ class ItemsMixin:
                     self.track_symbol(symbol)
         self.fn_ret, self.loop_depth = sig.ret, 0
         body_type = self.visit(ctx.block())
-        if ctx.block().expression() is not None:
-            self.check_returned_ref(ctx.block().expression())
+        if block_tail(ctx.block()) is not None:
+            self.check_returned_ref(block_tail(ctx.block()))
         self.pop_scope()
         self._check_function_result(ctx, sig, body_type)
 
     def _check_function_result(self, ctx, sig: FuncSig, body_type: Type | None) -> None:
         block = ctx.block()
-        tail = block.expression()
+        tail = block_tail(block)
+        if tail is not None and expression_diverges(tail):
+            return  # `match` como valor final con `return` en todos los brazos
         if tail is not None:
             self.mismatch(tail, E_BAD_RETURN, sig.ret, body_type, f"El valor final de '{sig.name}'")
         elif sig.ret != UNIT and not block_diverges(block):
@@ -166,8 +169,15 @@ class ItemsMixin:
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
         args = call.argumentList().expression() if call.argumentList() is not None else []
-        arg_types = [self.visit(a) for a in args]  # se visitan siempre para ver sus errores
+        mark = self.borrow_mark()
+        # Se visitan siempre para ver sus errores. Imprimir no mueve: `print_str(s)`
+        # deja `s` disponible, porque el host solo lee el String.
+        arg_types = self.visit_and_consume(args, moves=name not in HOST_NAMES)
         sig = self.info.functions.get(name)
+        if sig is not None and not self.may_hold_ref(sig.ret):
+            # Los `&`/`&mut` de los argumentos terminan al volver: el resultado no
+            # puede llevárselos. Así `f(&mut c) + f(&mut c)` es válido.
+            self.release_temporary_borrows(mark)
         if sig is None:
             if self.lookup(name) is not None:
                 self.error(callee, E_NOT_CALLABLE, f"'{name}' no es una función")
@@ -182,6 +192,4 @@ class ItemsMixin:
         else:
             for arg, actual, (pname, ptype) in zip(args, arg_types, sig.params):
                 self.mismatch(arg, E_TYPE_MISMATCH, ptype, actual, f"Argumento '{pname}' de '{name}'")
-        for arg in args:
-            self.consume(arg)
         return sig.ret

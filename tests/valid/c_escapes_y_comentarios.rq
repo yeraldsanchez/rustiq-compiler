@@ -1,0 +1,10 @@
+/* Comentario de bloque
+   en varias líneas, con * y / sueltos ** */
+fn main() {
+    print_str("tab\t \"comillas\" \\ barra"); // comentario de línea
+    print_char('\'');
+    print_char('\\');
+    print_char('\n');
+    print_str("/* no es comentario */");
+    /* b ** c */
+}

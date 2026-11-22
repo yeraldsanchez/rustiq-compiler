@@ -1,0 +1,6 @@
+tab	 "comillas" \ barra
+'
+\
+
+
+/* no es comentario */

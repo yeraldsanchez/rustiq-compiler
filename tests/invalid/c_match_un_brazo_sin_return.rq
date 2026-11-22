@@ -1,0 +1,13 @@
+// ERROR semantico E_BAD_RETURN 11:1
+fn f(n: i32) -> i32 {
+    match n {
+        0 => {
+            return 1;
+        },
+        _ => {
+            print_i32(n);
+        },
+    };
+}
+
+fn main() {}

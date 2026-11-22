@@ -1,0 +1,28 @@
+// Una variable sin inicializar queda lista si todas las ramas le asignan.
+fn signo(n: i32) -> i32 {
+    let s: i32;
+    if n > 0 {
+        s = 1;
+    } else if n < 0 {
+        s = -1;
+    } else {
+        s = 0;
+    }
+    s
+}
+
+fn main() {
+    print_i32(signo(7));
+    print_i32(signo(-3));
+    print_i32(signo(0));
+    let x: i32;
+    match signo(5) {
+        1 => {
+            x = 100;
+        },
+        _ => {
+            x = 200;
+        },
+    };
+    print_i32(x);
+}

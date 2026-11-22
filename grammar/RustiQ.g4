@@ -7,7 +7,8 @@ grammar RustiQ;
 
 @parser::members {
 # Pila para desambiguar "identificador {" entre struct literal y bloque.
-# En la condicion de if/while y en el valor de match no se admiten struct literals.
+# En la condicion de if/while y en el valor de match no se admiten struct literals,
+# salvo dentro de (), [], {} o los argumentos de una llamada, donde ya no hay ambigüedad.
 def ns(self):
     if not hasattr(self, "_ns"):
         self._ns = [False]
@@ -89,7 +90,7 @@ primitiveType
 // ---------------------------------------------------------------
 
 block
-    : LBRACE statement* expression? RBRACE
+    : LBRACE {self.ns().append(False)} statement* expression? {self.ns().pop()} RBRACE
     ;
 
 statement
@@ -192,7 +193,7 @@ postfix
     ;
 
 callSuffix
-    : LPAREN argumentList? RPAREN
+    : LPAREN {self.ns().append(False)} argumentList? {self.ns().pop()} RPAREN
     ;
 
 argumentList
@@ -204,7 +205,7 @@ fieldSuffix
     ;
 
 indexSuffix
-    : LBRACK expression RBRACK
+    : LBRACK {self.ns().append(False)} expression {self.ns().pop()} RBRACK
     ;
 
 primary
@@ -220,11 +221,11 @@ primary
     ;
 
 tupleLiteral
-    : LPAREN expression (COMMA expression)+ COMMA? RPAREN
+    : LPAREN {self.ns().append(False)} expression (COMMA expression)+ COMMA? {self.ns().pop()} RPAREN
     ;
 
 arrayLiteral
-    : LBRACK expression (COMMA expression)* COMMA? RBRACK
+    : LBRACK {self.ns().append(False)} expression (COMMA expression)* COMMA? {self.ns().pop()} RBRACK
     ;
 
 structLiteral
@@ -236,7 +237,7 @@ fieldInit
     ;
 
 enumValue
-    : IDENT COLONCOLON IDENT (LPAREN argumentList RPAREN)?
+    : IDENT COLONCOLON IDENT (LPAREN {self.ns().append(False)} argumentList {self.ns().pop()} RPAREN)?
     ;
 
 // ---------------------------------------------------------------
@@ -363,6 +364,15 @@ CHAR_LIT
 STRING_LIT
     : '"' ( ~["\\\r\n] | ESC )* '"'
     ;
+
+// Tokens de error, en el canal oculto: el parser no los ve y el pipeline los convierte en errores
+// léxicos con código propio. Van después de los literales válidos: con el mismo
+// largo gana el primero, así solo coinciden cuando el literal está mal.
+BAD_STRING          : '"' ( ~["\\\r\n] | '\\' ~[\r\n] )* '"' -> channel(HIDDEN) ;   // escape no válido
+UNTERMINATED_STRING : '"' ( ~["\\\r\n] | '\\' ~[\r\n] )* -> channel(HIDDEN) ;       // sin '"' antes del fin de línea
+BAD_CHAR            : '\'' ( ~['\\\r\n] | '\\' ~[\r\n] )* '\'' -> channel(HIDDEN) ;  // vacío, varios caracteres o escape no válido
+UNTERMINATED_CHAR   : '\'' ( ~['\\\r\n] | '\\' ~[\r\n] )* -> channel(HIDDEN) ;
+UNTERMINATED_COMMENT: '/*' ( ~'*' | '*'+ ~[*/] )* '*'* EOF -> channel(HIDDEN) ;
 
 fragment ESC   : '\\' [\\ntr"'] ;
 fragment DIGIT : [0-9] ;

@@ -1,0 +1,5 @@
+// ERROR semantico E_INT_OUT_OF_RANGE 3:13
+fn main() {
+    let x = 2147483648;
+    print_i32(x);
+}

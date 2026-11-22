@@ -1,0 +1,7 @@
+// ERROR semantico E_BORROW_CONFLICT 6:19
+fn ambos(a: &mut i32, b: &mut i32) {}
+
+fn main() {
+    let mut c = 0;
+    ambos(&mut c, &mut c);
+}

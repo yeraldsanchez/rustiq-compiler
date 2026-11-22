@@ -1,0 +1,14 @@
+// Funciones del usuario con nombres de funciones del runtime.
+fn alloc(n: i32) -> i32 { n + 1 }
+fn memcpy(a: i32, b: i32) -> i32 { a * b }
+fn str_new() -> i32 { 7 }
+fn str_len(x: i32) -> i32 { x }
+fn str_data() -> bool { true }
+
+fn main() {
+    print_i32(alloc(1));
+    print_i32(memcpy(3, 4));
+    print_i32(str_new());
+    print_i32(str_len(9));
+    print_bool(str_data());
+}

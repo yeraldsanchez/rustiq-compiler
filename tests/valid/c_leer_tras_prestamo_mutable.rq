@@ -1,0 +1,20 @@
+// El dueño se puede leer cuando el &mut ya terminó.
+struct Punto {
+    x: i32,
+    y: i32,
+}
+
+fn mover(p: &mut Punto, dx: i32) {
+    p.x = p.x + dx;
+}
+
+fn main() {
+    let mut p = Punto { x: 1, y: 2 };
+    mover(&mut p, 10);
+    print_i32(p.x);
+    {
+        let r = &mut p;
+        r.y = 20;
+    }
+    print_i32(p.y);
+}

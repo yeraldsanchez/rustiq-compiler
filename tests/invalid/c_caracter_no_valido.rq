@@ -1,0 +1,4 @@
+// ERROR lexico E_INVALID_CHAR 3:15
+fn main() {
+    let x = 1 # 2;
+}

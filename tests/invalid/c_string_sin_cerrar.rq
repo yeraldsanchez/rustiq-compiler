@@ -1,0 +1,4 @@
+// ERROR lexico E_UNTERMINATED_STRING 3:15
+fn main() {
+    print_str("hola);
+}

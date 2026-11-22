@@ -1,0 +1,10 @@
+// ERROR semantico E_USE_AFTER_MOVE 9:28
+struct Par {
+    a: String,
+    b: String,
+}
+
+fn main() {
+    let s = "hola";
+    let p = Par { a: s, b: s };
+}

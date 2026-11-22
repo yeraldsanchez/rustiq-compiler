@@ -1,0 +1,13 @@
+// print_str no mueve el String: se puede imprimir varias veces.
+struct Persona {
+    nombre: String,
+}
+
+fn main() {
+    let s = "hola";
+    print_str(s);
+    print_str(s);
+    let p = Persona { nombre: s };
+    print_str(p.nombre);
+    print_str(p.nombre);
+}
