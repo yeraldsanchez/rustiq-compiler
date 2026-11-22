@@ -1,8 +1,8 @@
 """Divergencia: ¿un bloque termina siempre en return, break o continue?
 
 Funciones puras sobre el árbol. Sirven para decidir si una función con tipo de
-retorno puede no tener expresión final (`return` en todas las ramas, o un
-`loop` sin `break`).
+retorno puede no tener expresión final (`return` en todas las ramas, un `match`
+con `return` en todos los brazos, o un `loop` sin `break`).
 """
 
 from antlr4 import ParserRuleContext
@@ -24,7 +24,33 @@ def _statement_diverges(stmt: P.StatementContext) -> bool:
         return _if_diverges(stmt.ifStmt())
     if isinstance(stmt, P.BlockSContext):
         return block_diverges(stmt.block())
+    if isinstance(stmt, P.ExprStmtContext):
+        return expression_diverges(stmt.expression())
     return False
+
+
+def expression_diverges(expression) -> bool:
+    """Un bloque que diverge, o un `match` cuyos brazos divergen todos."""
+    primary = bare_primary(expression)
+    if isinstance(primary, P.BlockPContext):
+        return block_diverges(primary.block())
+    if isinstance(primary, P.MatchPContext):
+        return all(expression_diverges(arm.expression()) for arm in primary.matchExpr().matchArm())
+    return False
+
+
+def bare_primary(expression):
+    """El `primary` si la expresión es solo eso (sin operadores ni sufijos), si no None."""
+    node = expression
+    while True:
+        if isinstance(node, P.PostfixContext):
+            return node.primary() if node.getChildCount() == 1 else None
+        if isinstance(node, P.ParenPContext):
+            node = node.expression()
+        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
+            node = node.getChild(0)
+        else:
+            return None
 
 
 def _if_diverges(stmt: P.IfStmtContext) -> bool:

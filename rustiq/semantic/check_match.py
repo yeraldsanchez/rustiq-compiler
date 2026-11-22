@@ -14,7 +14,8 @@ from rustiq.errors import (
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import EnumDef
-from rustiq.types import BOOL, EnumT, TupleT, Type, is_copy
+from rustiq.semantic.flow import expression_diverges
+from rustiq.types import BOOL, UNIT, EnumT, TupleT, Type, is_copy
 
 
 class MatchMixin:
@@ -70,10 +71,14 @@ class MatchMixin:
             self.pop_scope()
             branches.append(self.move_states)
             patterns_ok = patterns_ok and pattern_ok
+            if expression_diverges(arm.expression()):
+                continue  # `{ return v; }` no produce valor: no fija el tipo del match
             if result is None:
                 result = body
             else:
                 self.mismatch(arm.expression(), E_TYPE_MISMATCH, result, body, "El brazo de match")
+        if result is None and patterns_ok and all(expression_diverges(a.expression()) for a in ctx.matchArm()):
+            result = UNIT
         self.branch_end(before, branches, exhaustive=True)
         if binds_owned_value(self.info, [arm.pattern() for arm in ctx.matchArm()]):
             self.consume(ctx.condition())

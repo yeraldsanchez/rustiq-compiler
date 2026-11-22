@@ -24,6 +24,7 @@ from antlr4 import ParserRuleContext
 
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.flow import bare_primary as _bare_primary
 from rustiq.semantic.moves import moved_identifier
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
@@ -214,20 +215,6 @@ def borrowed_roots(analyzer, expression) -> list:
     if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
         return []
     return [root for arg in suffix.argumentList().expression() for root in borrowed_roots(analyzer, arg)]
-
-
-def _bare_primary(expression):
-    """El `primary` si la expresión es solo eso (sin operadores ni sufijos), si no None."""
-    node = expression
-    while True:
-        if isinstance(node, P.PostfixContext):
-            return node.primary() if node.getChildCount() == 1 else None
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
 
 
 def _call_of(expression):

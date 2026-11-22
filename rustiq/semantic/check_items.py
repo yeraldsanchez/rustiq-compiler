@@ -19,7 +19,7 @@ from rustiq.errors import (
     E_UNKNOWN_TYPE,
 )
 from rustiq.generated.RustiQParser import RustiQParser
-from rustiq.semantic.flow import block_diverges
+from rustiq.semantic.flow import block_diverges, expression_diverges
 from rustiq.semantic.info import FuncSig
 from rustiq.types import (
     BOOL,
@@ -139,6 +139,8 @@ class ItemsMixin:
     def _check_function_result(self, ctx, sig: FuncSig, body_type: Type | None) -> None:
         block = ctx.block()
         tail = block.expression()
+        if tail is not None and expression_diverges(tail):
+            return  # `match` como valor final con `return` en todos los brazos
         if tail is not None:
             self.mismatch(tail, E_BAD_RETURN, sig.ret, body_type, f"El valor final de '{sig.name}'")
         elif sig.ret != UNIT and not block_diverges(block):

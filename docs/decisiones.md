@@ -67,7 +67,7 @@ _Por completar._
 - Una variable movida dentro de una rama no se repone aunque se le asigne un valor nuevo en esa misma rama (G8). Rust sí la repone si se reasigna en todos los caminos.
 - Un préstamo guardado en una variable vive hasta el fin del bloque de esa variable, aunque ya no se use (G9). Rust lo termina en su último uso.
 - Un `match` con patrones anidados refutables necesita un brazo `_` (G10). Rust calcula la exhaustividad exacta.
-- Un brazo de `match` cuyo cuerpo termina en `return` o `break` tiene tipo `()`, porque RustiQ no tiene el tipo `!` de Rust. Si los otros brazos producen un valor, es error de tipos.
+- RustiQ no tiene el tipo `!` de Rust. Un brazo de `match` cuyo bloque termina en `return`, `break` o `continue` no fija el tipo del `match`, y un `match` con `return` en todos los brazos cuenta como camino que termina la función.
 - Rust avisa de brazos inalcanzables en un `match`; RustiQ no.
 - Mover dentro de un ciclo una variable declarada fuera es error aunque después venga `break` o `return` (G8). Rust lo permite si el ciclo no vuelve a usarla.
 - No hay liberación de memoria (`drop`).
