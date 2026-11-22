@@ -1,0 +1,7 @@
+// ERROR semantico E_MOVE_OUT_OF_PLACE 6:11
+fn tomar(s: String) {}
+
+fn main() {
+    let a = ["uno", "dos"];
+    tomar(a[0]);
+}

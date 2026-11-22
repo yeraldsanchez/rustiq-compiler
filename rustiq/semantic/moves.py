@@ -26,7 +26,7 @@ uno por uno al visitarlos (`visit_and_consume`), así `f(s, s)` es error.
 
 from antlr4 import ParserRuleContext
 
-from rustiq.errors import E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
+from rustiq.errors import E_MOVE_OUT_OF_PLACE, E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import is_copy
 
@@ -62,7 +62,22 @@ class MovesMixin:
         return state == AVAILABLE
 
     def consume(self, expression) -> None:
-        """Mueve la variable si `expression` es solo una variable cuyo tipo no es Copy."""
+        """Mueve la variable si `expression` es solo una variable cuyo tipo no es Copy.
+
+        Un campo, un elemento o un `*r` que no es Copy no se puede mover: el
+        valor seguiría siendo accesible desde su dueño y los dos compartirían
+        memoria. Se reporta E_MOVE_OUT_OF_PLACE.
+        """
+        place = borrowed_place(expression)
+        if place is not None:
+            place_type = self.info.expr_type.get(place)
+            if place_type is not None and not is_copy(place_type):
+                self.error(
+                    place, E_MOVE_OUT_OF_PLACE,
+                    f"No se puede mover '{place.getText()}' ({place_type}) fuera de un campo, "
+                    "un elemento o una referencia; usa '&' para prestarlo",
+                )
+            return
         ident = moved_identifier(expression)
         symbol = self.info.symbol.get(ident) if ident is not None else None
         if symbol is None or symbol.kind not in MOVABLE_KINDS or symbol.type is None or is_copy(symbol.type):
@@ -125,6 +140,35 @@ class MovesMixin:
     def branch_restore(self, before: dict[int, str]) -> None:
         """Vuelve al estado de antes para empezar la siguiente rama."""
         self.move_states = dict(before)
+
+
+def borrowed_place(node):
+    """El nodo de `a.campo`, `a[i]` o `*r` si la expresión es solo eso, si no None.
+
+    Una llamada (`f().campo` incluida) produce un temporal propio y no cuenta.
+    """
+    while True:
+        if isinstance(node, P.UnaryContext):
+            if node.STAR() is not None:
+                return node
+            if node.getChildCount() != 1:
+                return None  # `-x`, `!x`, `&x`
+            node = node.postfix()
+            continue
+        if isinstance(node, P.PostfixContext):
+            suffixes = node.children[1:]
+            if not suffixes:
+                node = node.primary()
+                continue
+            if any(isinstance(s, P.CallSuffixContext) for s in suffixes):
+                return None
+            return node
+        if isinstance(node, P.ParenPContext):
+            node = node.expression()
+        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
+            node = node.getChild(0)
+        else:
+            return None
 
 
 def moved_identifier(node):

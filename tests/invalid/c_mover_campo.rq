@@ -1,0 +1,17 @@
+// ERROR semantico E_MOVE_OUT_OF_PLACE 14:17
+struct Dentro {
+    v: i32,
+}
+
+struct Fuera {
+    d: Dentro,
+    k: i32,
+}
+
+fn main() {
+    let f = Fuera { d: Dentro { v: 1 }, k: 2 };
+    // Si se aceptara, q y f.d compartirían memoria.
+    let mut q = f.d;
+    q.v = 99;
+    print_i32(f.d.v);
+}
