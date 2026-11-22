@@ -65,12 +65,12 @@ lookup(name) -> Symbol | None
 
 ### Movimientos (`semantic/moves.py`)
 
-TODO(B): A ya lleva el estado de cada variable (disponible, movida, sin inicializar), las ramas (G8) y los ciclos. Faltan estas llamadas desde el código de B:
+A ya lleva el estado de cada variable (disponible, movida, sin inicializar), las ramas (G8) y los ciclos. `visitIdentP` (Analyzer) ya llama a `check_use`, y `visitLetDecl` a `consume` y `track_symbol`. Una variable cuyo tipo quedó en `None` por un error previo no se mueve ni se reporta como sin inicializar, para no generar errores en cascada.
+
+TODO(B): faltan estas llamadas desde el código de B:
 
 | Dónde (B) | Llamada |
 | --- | --- |
-| `visitIdentP` (Analyzer) | `self.check_use(symbol, ctx)` después de anotar `info.symbol[ctx]` |
-| `visitLetDecl` | `self.consume(ctx.expression())` si tiene inicializador, y `self.track_symbol(symbol, initialized=ctx.expression() is not None)` |
 | `visitAssignment` con `=` | `self.consume(ctx.expression())` y luego `self.mark_initialized(symbol)` |
 | `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
 

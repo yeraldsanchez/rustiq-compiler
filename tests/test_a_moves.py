@@ -67,13 +67,11 @@ def test_match_que_liga_un_valor_no_copy_mueve_su_valor():
 # --- Uso después de mover (necesita B) ----------------------------------------
 
 
-@espera_carril_b
 def test_uso_despues_de_mover_con_let():
     src = PUNTO + "fn main() {\n    let a = Punto { x: 1, y: 2 };\n    let b = a;\n    usar(a);\n}"
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 7, 10)]
 
 
-@espera_carril_b
 def test_uso_despues_de_pasar_a_una_funcion():
     src = PUNTO + "fn main() {\n    let a = Punto { x: 1, y: 2 };\n    usar(a);\n    usar(a);\n}"
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 7, 10)]
@@ -85,13 +83,11 @@ def test_reinicializar_despues_de_mover_es_valido():
     assert errores_reales(src) == []
 
 
-@espera_carril_b
 def test_movido_en_una_rama_queda_movido_despues_del_if():
     src = PUNTO + "fn main() {\n    let c = true;\n    let a = Punto { x: 1, y: 2 };\n    if c { usar(a); }\n    usar(a);\n}"
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 8, 10)]
 
 
-@espera_carril_b
 def test_reponer_dentro_de_la_rama_no_cuenta():
     src = PUNTO + "fn main() {\n    let c = true;\n    let mut a = Punto { x: 1, y: 2 };\n    if c { usar(a); a = Punto { x: 0, y: 0 }; }\n    usar(a);\n}"
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 8, 10)]
@@ -103,7 +99,6 @@ def test_cada_rama_empieza_con_el_estado_de_antes():
     assert errores_reales(src) == []
 
 
-@espera_carril_b
 def test_uso_antes_de_asignar():
     src = PUNTO + "fn main() {\n    let a: Punto;\n    usar(a);\n}"
     assert errores_reales(src) == [(E_UNINITIALIZED, 6, 10)]
