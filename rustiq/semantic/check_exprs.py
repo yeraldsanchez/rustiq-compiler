@@ -67,6 +67,7 @@ class ExprsMixin:
         if inner is not None:
             self.info.expr_type.put(ctx.postfix(), inner)
         if ctx.AMP() is not None:
+            inner = self.reject_unit(ctx.postfix(), inner, "Lo que se presta con '&'")
             target_name = None
             primary = ctx.postfix().primary()
             if isinstance(primary, P.IdentPContext):

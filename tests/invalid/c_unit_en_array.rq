@@ -1,0 +1,6 @@
+// ERROR semantico E_TYPE_MISMATCH 5:14
+fn nada() {}
+
+fn main() {
+    let a = [nada(), nada()];
+}

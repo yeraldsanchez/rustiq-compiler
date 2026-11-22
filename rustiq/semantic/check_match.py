@@ -55,7 +55,7 @@ class MatchMixin:
     # --- match ------------------------------------------------------------------
 
     def visitMatchExpr(self, ctx: P.MatchExprContext):
-        scrutinee = self.visit(ctx.condition())
+        scrutinee = self.reject_unit(ctx.condition(), self.visit(ctx.condition()), "El valor de match")
         if scrutinee is None:
             return None
         self.info.expr_type.put(ctx.condition(), scrutinee)

@@ -94,7 +94,7 @@ class StructsMixin:
         return result
 
     def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
-        elems = [self.visit(e) for e in ctx.expression()]
+        elems = [self.reject_unit(e, self.visit(e), "Un elemento de tupla") for e in ctx.expression()]
         for e in ctx.expression():
             self.consume(e)
         if any(e is None for e in elems):
