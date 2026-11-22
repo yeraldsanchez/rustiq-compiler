@@ -1,0 +1,5 @@
+fn main() {
+    let s = "uno\tdos";
+    print_str(s);
+    print_str("comillas \"dobles\" y barra \\");
+}
