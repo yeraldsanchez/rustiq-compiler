@@ -22,9 +22,10 @@ class ArraysMixin:
 
     def visitArrayLiteral(self, ctx: P.ArrayLiteralContext):
         elements = ctx.expression()
-        types = [self.reject_unit(e, self.visit(e), "Un elemento de array") for e in elements]
-        for element in elements:
-            self.consume(element)
+        types = [
+            self.reject_unit(e, t, "Un elemento de array")
+            for e, t in zip(elements, self.visit_and_consume(elements))
+        ]
         first = types[0]
         if first is None:
             return None

@@ -1,0 +1,5 @@
+// ERROR semantico E_USE_AFTER_MOVE 4:17
+fn main() {
+    let s = "hola";
+    let t = (s, s);
+}

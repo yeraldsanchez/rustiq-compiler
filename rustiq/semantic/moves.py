@@ -20,10 +20,8 @@ Ciclos (G8): mover dentro de un ciclo una variable declarada fuera de él es err
 Ya conectado desde B: `visitIdentP` llama a `check_use` y `visitLetDecl` a
 `consume` y `track_symbol`.
 
-TODO(B): llamadas que faltan desde el código de B (Byron):
-    - visitAssignment con `=` sobre una variable: `self.consume(ctx.expression())`
-      y luego `self.mark_initialized(symbol)` (reinicializa una variable movida).
-    - visitArrayLiteral: `self.consume(elemento)` por cada elemento.
+Los operandos de una misma expresión (argumentos, campos, elementos) se mueven
+uno por uno al visitarlos (`visit_and_consume`), así `f(s, s)` es error.
 """
 
 from antlr4 import ParserRuleContext
@@ -89,6 +87,17 @@ class MovesMixin:
         self.move_states[symbol.uid] = MOVED
         if self.moved_in_branches:
             self.moved_in_branches[-1].add(symbol.uid)
+
+    def visit_and_consume(self, expressions) -> list:
+        """Visita cada expresión y la mueve enseguida, antes de la siguiente.
+
+        Así `f(s, s)` o `(s, s)` reportan uso después de mover en el segundo `s`.
+        """
+        types = []
+        for expression in expressions:
+            types.append(self.visit(expression))
+            self.consume(expression)
+        return types
 
     # --- Ramas (G8) ------------------------------------------------------------
 

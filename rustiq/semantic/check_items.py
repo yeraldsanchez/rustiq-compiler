@@ -166,7 +166,7 @@ class ItemsMixin:
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
         args = call.argumentList().expression() if call.argumentList() is not None else []
-        arg_types = [self.visit(a) for a in args]  # se visitan siempre para ver sus errores
+        arg_types = self.visit_and_consume(args)  # se visitan siempre para ver sus errores
         sig = self.info.functions.get(name)
         if sig is None:
             if self.lookup(name) is not None:
@@ -182,6 +182,4 @@ class ItemsMixin:
         else:
             for arg, actual, (pname, ptype) in zip(args, arg_types, sig.params):
                 self.mismatch(arg, E_TYPE_MISMATCH, ptype, actual, f"Argumento '{pname}' de '{name}'")
-        for arg in args:
-            self.consume(arg)
         return sig.ret

@@ -23,9 +23,7 @@ class MatchMixin:
     def visitEnumValue(self, ctx: P.EnumValueContext):
         enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
         args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
-        arg_types = [self.visit(a) for a in args]  # siempre, para ver sus errores
-        for a in args:
-            self.consume(a)
+        arg_types = self.visit_and_consume(args)
         payload = self._variant_payload(ctx, enum_name, variant)
         if payload is None:
             return None

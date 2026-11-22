@@ -66,7 +66,7 @@ class StructsMixin:
         name = ctx.IDENT().getText()
         definition = self.info.structs.get(name)
         inits = ctx.fieldInit()
-        types = [self.visit(fi.expression()) for fi in inits]  # siempre, para ver sus errores
+        types = self.visit_and_consume([fi.expression() for fi in inits])
         if definition is None:
             self.error(ctx.IDENT(), E_UNKNOWN_TYPE, f"El struct '{name}' no existe")
             return None
@@ -87,16 +87,13 @@ class StructsMixin:
                     fi.expression(), E_TYPE_MISMATCH, definition.fields[fname], actual,
                     f"El campo '{fname}' de '{name}'",
                 )
-        for fi in inits:
-            self.consume(fi.expression())
         result = StructT(name)
         self.info.expr_type.put(ctx, result)
         return result
 
     def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
-        elems = [self.reject_unit(e, self.visit(e), "Un elemento de tupla") for e in ctx.expression()]
-        for e in ctx.expression():
-            self.consume(e)
+        exprs = ctx.expression()
+        elems = [self.reject_unit(e, t, "Un elemento de tupla") for e, t in zip(exprs, self.visit_and_consume(exprs))]
         if any(e is None for e in elems):
             return None
         result = TupleT(tuple(elems))
