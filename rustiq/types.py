@@ -59,36 +59,21 @@ class EnumT:
 
 Type = PrimitiveT | ArrayT | TupleT | RefT | StructT | EnumT
 
-# Alias for the String primitive type (used by the parser and type checker)
-
-
-# Helper utilities for reference types
-
-def is_shared_ref(t: Type) -> bool:
-    """Return True if *t* is a shared reference (`&T`).
-    Shared references are represented by `RefT` with ``mutable=False``.
-    """
-    return isinstance(t, RefT) and not t.mutable
-
-
-def is_mutable_ref(t: Type) -> bool:
-    """Return True if *t* is a mutable reference (`&mut T`).
-    Mutable references are represented by `RefT` with ``mutable=True``.
-    """
-    return isinstance(t, RefT) and t.mutable
-
+# Singletons
 I32 = PrimitiveT("i32")
 F64 = PrimitiveT("f64")
 BOOL = PrimitiveT("bool")
 CHAR = PrimitiveT("char")
 STRING = PrimitiveT("String")
-# Alias for the primitive String type used throughout the compiler
-String = STRING
-
-# Unit type – represents functions that return no value ("()")
 UNIT = TupleT(())  # tipo de las funciones sin valor de retorno: ()
 
 
+def is_scalar(t: Type) -> bool:
+    """True si el valor vive directo en un local (docs/memoria.md), no detrás de un puntero.
+
+    Son los que necesitan una celda en el heap cuando se les aplica `&`.
+    """
+    return t in (I32, F64, BOOL, CHAR) or isinstance(t, RefT)
 
 
 def is_copy(t: Type) -> bool:

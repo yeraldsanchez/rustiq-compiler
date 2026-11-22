@@ -267,10 +267,10 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 - [ ] Lunes 9: tabla de símbolos con ámbitos y `uid` por símbolo. La usan ambos
 - [ ] Ámbitos: uso sin declarar y declaración duplicada
-- [ ] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen. Aritmética i32 lista el martes 10
+- [x] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen (pasados a main por A desde la rama de B)
 - [ ] Inferencia de `let` sin tipo, y `let` sin inicializador con uso antes de asignar
-- [ ] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut`
-- [ ] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen
+- [x] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut` (lo hizo A con permiso de B, en `check_assign.py`)
+- [x] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen (lo hizo A con permiso de B)
 - [ ] Inválidos de sus características
 
 - [ ] **Sincronización mar 10:** un programa con función, `let`, aritmética e `if` compila de punta a punta.
@@ -283,18 +283,18 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 - [x] Enums: declaración, `Enum::Variante`, tag y payload. Tipos y codegen
 - [x] Match: tipos de patrones, mismo tipo en todos los brazos, exhaustividad. Codegen sobre enums, literales, `_`, identificadores y tuplas
-- [ ] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
-- [ ] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
-- [ ] No mover un valor con préstamo activo, consultando `borrows`. Hecho del lado de A; faltan las llamadas TODO(B) de `interfaz-carriles.md`
+- [x] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`
+- [x] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops
+- [x] No mover un valor con préstamo activo, consultando `borrows`
 - [x] ~~Copia de arrays y tuplas Copy con `memcpy`~~ Ya no hace falta: arrays y tuplas se mueven (G1)
-- [ ] Inválidos de sus características
+- [x] Inválidos de sus características
 
 **B**
 
 - [ ] Strings: literales en el segmento de datos, `print_str`, move, paso y retorno. Sin concatenación ni comparación (P9)
-- [ ] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen
-- [ ] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
-- [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
+- [x] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen (celdas y codegen los hizo A con permiso de B)
+- [x] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
+- [x] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
 - [ ] Resaltado de sintaxis RustiQ en el editor
 - [ ] Inválidos de sus características
 

@@ -2,7 +2,7 @@
 
 from rustiq.errors import E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
 from rustiq.semantic.info import Symbol
-from rustiq.types import Type, UNIT
+from rustiq.types import RefT, Type, UNIT
 
 
 class ScopesMixin:
@@ -13,6 +13,7 @@ class ScopesMixin:
         self._scopes_list().append({})
 
     def pop_scope(self) -> None:
+        self.release_scope_borrows()
         self._scopes_list().pop()
 
     def _is_redeclared_in_current_or_params(self, name: str) -> bool:
@@ -65,6 +66,7 @@ class ScopesMixin:
         has_init = ctx.expression() is not None
 
         declared_type: Type | None = self.resolve_type(ctx.type_()) if has_type_ann else None
+        mark = self.borrow_mark()
         init_type: Type | None = self.visit(ctx.expression()) if has_init else None
 
         final_type: Type | None = declared_type if has_type_ann else init_type
@@ -93,6 +95,10 @@ class ScopesMixin:
         if symbol is None:
             return None
         self.info.symbol.put(ctx, symbol)
+        if isinstance(final_type, RefT):
+            self.keep_borrows(mark)  # `let r = &x;`: el préstamo vive lo que vive `r`
+            if has_init:
+                self.track_ref_origin(symbol, ctx.expression())
         if has_init:
             self.consume(ctx.expression())
         # Con tipo None ya hubo un error: no se reporta además "sin inicializar"

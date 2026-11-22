@@ -9,23 +9,7 @@ files.
 
 from __future__ import annotations
 
-import io
-import sys
-from typing import Callable
-
 import wasmtime
-
-
-def _capture_stdout(func: Callable[..., None]) -> str:
-    """Run ``func`` with stdout captured and return the captured text."""
-    old_stdout = sys.stdout
-    captured = io.StringIO()
-    try:
-        sys.stdout = captured
-        func()
-    finally:
-        sys.stdout = old_stdout
-    return captured.getvalue()
 
 
 def run_wasm(module_bytes: bytes) -> str:

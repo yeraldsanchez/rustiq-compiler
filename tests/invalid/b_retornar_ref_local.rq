@@ -1,0 +1,6 @@
+// ERROR semantico E_RETURN_LOCAL_REF 4:5
+fn mayor() -> &i32 {
+    let x = 10;
+    &x
+}
+fn main() {}

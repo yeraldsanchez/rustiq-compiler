@@ -20,9 +20,10 @@ from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.info import SemanticInfo, Symbol
-from rustiq.types import UNIT, Type
+from rustiq.types import I32, UNIT, Type
 
 INDENT = "  "
+CELL_SIZE = 8  # una celda guarda un escalar (i32 o f64)
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
@@ -79,8 +80,33 @@ class Emitter(
         initializer = self.global_consts.get(symbol.uid)
         if initializer is not None:
             self.visit(initializer)
+        elif symbol.address_taken:
+            self.emit(f"local.get {self.cell_name(symbol)}")
+            self.emit(f"{wasm_type(symbol.type)}.load")
         else:
             self.emit(f"local.get {self.local_name(symbol)}")
+
+    def store_symbol(self, symbol: Symbol, emit_value) -> None:
+        """Guarda en el símbolo el valor que deja `emit_value()`, en su local o en su celda."""
+        if symbol.address_taken:
+            self.emit(f"local.get {self.cell_name(symbol)}")
+            emit_value()
+            self.emit(f"{wasm_type(symbol.type)}.store")
+        else:
+            emit_value()
+            self.emit(f"local.set {self.local_name(symbol)}")
+
+    @staticmethod
+    def cell_name(symbol: Symbol) -> str:
+        """Local con la dirección de la celda de un escalar con `&` aplicado."""
+        return f"${symbol.name}_{symbol.uid}_cell"
+
+    def alloc_cell(self, symbol: Symbol) -> None:
+        """Reserva la celda de un escalar con `&` aplicado y guarda su dirección."""
+        cell = self.declare_local(self.cell_name(symbol), I32)
+        self.emit(f"i32.const {CELL_SIZE}")
+        self.emit("call $alloc")
+        self.emit(f"local.set {cell}")
 
     def declare_local(self, name: str, t: Type) -> str:
         """Declara un local (una sola vez) y devuelve su nombre Wasm."""
@@ -88,6 +114,9 @@ class Emitter(
         return name
 
     def declare_symbol(self, symbol: Symbol) -> str:
+        """Declara el local del símbolo. Si vive en una celda, también la reserva."""
+        if symbol.address_taken:
+            self.alloc_cell(symbol)
         return self.declare_local(self.local_name(symbol), symbol.type)
 
     def new_temp(self, t: Type) -> str:
@@ -118,7 +147,7 @@ class Emitter(
         for line in RUNTIME_WAT.splitlines():
             self.emit(line)
         self.visit(tree)
-        for offset, data in getattr(self, "_data_segments", []):
+        for offset, data in self._data_segments:
             escaped = "".join(f"\\{b:02x}" for b in data)
             self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self._depth -= 1
@@ -147,6 +176,7 @@ class Emitter(
         # El cuerpo se emite aparte: sus locales solo se conocen al terminar.
         outer_lines, self._lines = self._lines, []
         outer_depth, self._depth = self._depth, self._depth + 1
+        self._box_params(ctx)
         self.visit(ctx.block())
         if sig.ret != UNIT and ctx.block().expression() is None:
             # Sin expresión final, todos los caminos terminan en return o en un loop sin
@@ -171,6 +201,18 @@ class Emitter(
         self._depth -= 1
         self.emit(")")
         self._fn = None
+
+    def _box_params(self, ctx: RustiQParser.FunctionDeclContext) -> None:
+        """Copia a una celda cada parámetro escalar con `&` aplicado, al entrar."""
+        if ctx.parameterList() is None:
+            return
+        for p in ctx.parameterList().parameter():
+            symbol = self.info.symbol.get(p)
+            if symbol is not None and symbol.address_taken:
+                self.alloc_cell(symbol)
+                self.emit(f"local.get {self.cell_name(symbol)}")
+                self.emit(f"local.get {self.local_name(symbol)}")
+                self.emit(f"{wasm_type(symbol.type)}.store")
 
     def _param_names(self, ctx: RustiQParser.FunctionDeclContext, sig) -> list[str]:
         """Nombre Wasm de cada parámetro: por uid si hay símbolo, si no por posición."""
