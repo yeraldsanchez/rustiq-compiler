@@ -52,7 +52,8 @@ class ControlMixin:
             self.branch_restore(before)
             self.visit(ctx.ifStmt())
             branches.append(self.move_states)
-        self.branch_end(before, branches)
+        has_else = len(ctx.block()) == 2 or ctx.ifStmt() is not None
+        self.branch_end(before, branches, exhaustive=has_else)
 
     def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
         self._check_condition(ctx.condition())

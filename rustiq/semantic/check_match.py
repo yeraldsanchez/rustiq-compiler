@@ -74,7 +74,7 @@ class MatchMixin:
                 result = body
             else:
                 self.mismatch(arm.expression(), E_TYPE_MISMATCH, result, body, "El brazo de match")
-        self.branch_end(before, branches)
+        self.branch_end(before, branches, exhaustive=True)
         if binds_owned_value(self.info, [arm.pattern() for arm in ctx.matchArm()]):
             self.consume(ctx.condition())
         if patterns_ok and not is_exhaustive([arm.pattern() for arm in ctx.matchArm()], scrutinee, self.info.enums):

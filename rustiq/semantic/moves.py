@@ -13,7 +13,9 @@ struct, tupla o enum, valor de un `match` o cuerpo de un brazo. Leer un campo
 
 Ramas (G8): cada rama de un `if` o brazo de `match` empieza con el estado de
 antes y, al terminar, cada variable queda en el peor estado entre el de antes y
-el de cada rama. Así reponer una variable dentro de una rama no cuenta.
+el de cada rama. Así reponer una variable dentro de una rama no cuenta. Si las
+ramas cubren todos los casos (`if` con `else`, `match`), el de antes no entra:
+`let x: i32;` asignada en todas las ramas queda inicializada.
 
 Ciclos (G8): mover dentro de un ciclo una variable declarada fuera de él es error.
 
@@ -124,11 +126,17 @@ class MovesMixin:
         self.moved_in_branches.append(set())
         return dict(self.move_states)
 
-    def branch_end(self, before: dict[int, str], branches: list[dict[int, str]]) -> None:
-        """Une el estado de las ramas: cada variable queda en el peor estado."""
+    def branch_end(self, before: dict[int, str], branches: list[dict[int, str]], exhaustive: bool = False) -> None:
+        """Une el estado de las ramas: cada variable queda en el peor estado.
+
+        Si las ramas cubren todos los casos (`if` con `else`, `match`), el estado de
+        antes no cuenta: una variable asignada en todas las ramas queda inicializada.
+        """
         merged = {}
         for uid in set(before).union(*branches):
-            states = [before.get(uid, AVAILABLE)] + [b.get(uid, AVAILABLE) for b in branches]
+            states = [b.get(uid, AVAILABLE) for b in branches]
+            if not exhaustive or not branches:
+                states.append(before.get(uid, AVAILABLE))
             merged[uid] = max(states, key=SEVERITY.__getitem__)
         moved = self.moved_in_branches.pop()
         for uid in moved:

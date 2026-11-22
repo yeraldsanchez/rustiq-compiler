@@ -47,7 +47,7 @@ Criterio del profesor (9 de noviembre de 2026): la gramática se sigue tal como 
 | T1 | Struct literal contra bloque | Prohibido en condiciones de `if`, `while` y en el valor de `match`. Se usa entre paréntesis |
 | T2 | Comparaciones encadenadas | `a < b < c` es error sintáctico, igual que en Rust |
 | T3 | `&&x` | No soportado. `unary` acepta un solo prefijo, así que la EBNF tampoco permite `& &x` |
-| T4 | `let` sin inicializador | Válido si el tipo se indica y se asigna antes de usarse. Reutiliza el estado "sin inicializar" de movimientos |
+| T4 | `let` sin inicializador | Válido si el tipo se indica y se asigna antes de usarse. Cuenta como asignada si se le asigna en todas las ramas de un `if` con `else` o de un `match` Reutiliza el estado "sin inicializar" de movimientos |
 
 ## Soportado
 
