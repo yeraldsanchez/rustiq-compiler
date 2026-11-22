@@ -18,6 +18,9 @@ export const dom = {
   retryButton: byId<HTMLButtonElement>("btn-retry"),
 
   editor: byId<HTMLDivElement>("editor"),
+  liveButton: byId<HTMLButtonElement>("btn-live"),
+  splitX: byId<HTMLDivElement>("split-x"),
+  splitY: byId<HTMLDivElement>("split-y"),
   cursorPos: byId<HTMLSpanElement>("cursor-pos"),
 
   statState: byId<HTMLSpanElement>("stat-state"),

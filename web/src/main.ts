@@ -6,24 +6,33 @@ import { dom } from "./dom";
 import { createEditor } from "./editor/editor";
 import { EXAMPLE_GROUPS, findExample } from "./examples";
 import { Runner, TIME_LIMIT_MS, type RunResult } from "./run/runner";
-import { loadSource, saveSource } from "./storage";
+import { KEYS, load, save } from "./storage";
 import type { CompileError, CompileResponse } from "./types";
 import { hideBanner, showBanner } from "./ui/banner";
 import { renderErrors } from "./ui/errors";
+import { initLiveErrors, type LiveErrors } from "./ui/liveToggle";
 import { appendNote, clearOutput, printLine, selectTab, setModule, showOutputMessage } from "./ui/output";
+import { initSplitters } from "./ui/splitters";
 import { errorCountLabel, setCompileTime, setModuleSize, setState } from "./ui/status";
 
 const DEFAULT_EXAMPLE = "test_b4_strings.rq";
 const SAVE_DELAY_MS = 300;
 
 const runner = new Runner();
-let compiling = false;
+// Compilaciones visibles en curso (las de Compilar y Ejecutar). Las de los
+// errores en vivo no bloquean los botones.
+let visibleCompiles = 0;
+// Cada compilación se numera; solo se pinta la respuesta de la más reciente,
+// por si llegan desordenadas.
+let latestRequest = 0;
 let saveTimer: number | undefined;
+let live: LiveErrors | null = null;
 
 const editor = createEditor(dom.editor, initialSource(), {
   onChange(source) {
     window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => saveSource(source), SAVE_DELAY_MS);
+    saveTimer = window.setTimeout(() => save(KEYS.source, source), SAVE_DELAY_MS);
+    live?.notifyChange();
   },
   onCursor(line, column) {
     dom.cursorPos.textContent = `Ln ${line}, Col ${column}`;
@@ -33,11 +42,11 @@ const editor = createEditor(dom.editor, initialSource(), {
 });
 
 function initialSource(): string {
-  return loadSource() ?? findExample(DEFAULT_EXAMPLE)?.source ?? "fn main() {\n}\n";
+  return load(KEYS.source) ?? findExample(DEFAULT_EXAMPLE)?.source ?? "fn main() {\n}\n";
 }
 
 function updateButtons(): void {
-  const busy = compiling || runner.running;
+  const busy = visibleCompiles > 0 || runner.running;
   dom.compileButton.disabled = busy;
   dom.runButton.disabled = busy;
   dom.stopButton.disabled = !runner.running;
@@ -47,26 +56,33 @@ function goToError(error: CompileError): void {
   editor.goTo(error.line, error.column);
 }
 
-/** Compila y pinta el resultado. Devuelve null si no hubo respuesta. */
-async function compile(): Promise<CompileResponse | null> {
-  if (compiling || runner.running) return null;
-  compiling = true;
-  updateButtons();
-  setState("Compilando…", "neutral");
+/** Compila y pinta el resultado. Devuelve null si no hubo respuesta o si
+ *  otra compilación más reciente la dejó obsoleta. `quiet` es para los
+ *  errores en vivo: no muestra "Compilando…" ni bloquea los botones. */
+async function compile({ quiet = false } = {}): Promise<CompileResponse | null> {
+  if (runner.running || (!quiet && visibleCompiles > 0)) return null;
+  const request = ++latestRequest;
+  if (!quiet) {
+    visibleCompiles += 1;
+    updateButtons();
+    setState("Compilando…", "neutral");
+  }
   const started = performance.now();
 
   try {
     const result = await compileSource(editor.getSource());
+    if (request !== latestRequest) return null;
     hideBanner();
     showCompileResult(result, performance.now() - started);
     return result;
   } catch (error) {
     if (!(error instanceof ConnectionError)) throw error;
+    if (request !== latestRequest) return null;
     showBanner(error.message, () => void compile());
     setState("Sin conexión", "error");
     return null;
   } finally {
-    compiling = false;
+    if (!quiet) visibleCompiles -= 1;
     updateButtons();
   }
 }
@@ -166,4 +182,6 @@ document.addEventListener("keydown", (event) => {
 
 fillExamples();
 renderErrors([], goToError);
+initSplitters();
+live = initLiveErrors(() => void compile({ quiet: true }));
 updateButtons();

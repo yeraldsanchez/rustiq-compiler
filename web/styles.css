@@ -64,6 +64,16 @@ p {
   display: none !important;
 }
 
+/* Sin barras de desplazamiento: no encajan con la estética. Se sigue
+   desplazando con la rueda, el trackpad o el teclado. */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 code {
   font-family: var(--font-mono);
   font-size: 0.92em;
@@ -73,14 +83,17 @@ code {
 
 .app {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: auto auto auto minmax(0, 1fr) minmax(0, 0.7fr);
+  /* El editor ocupa una columna de ancho variable; la derecha se reparte en
+     5 para los indicadores. Los separadores (src/ui/splitters.ts) cambian
+     las variables. */
+  grid-template-columns: minmax(0, var(--editor-width, 58%)) repeat(5, minmax(0, 1fr));
+  grid-template-rows: auto auto auto minmax(0, var(--output-fr, 0.6fr)) minmax(0, var(--errors-fr, 0.4fr));
   grid-template-areas:
-    "top  top  top  top  top  top  top  top  top  top  top  top"
-    "ban  ban  ban  ban  ban  ban  ban  ban  ban  ban  ban  ban"
-    "ed   ed   ed   ed   ed   ed   ed   s1   s1   s2   s2   s3"
-    "ed   ed   ed   ed   ed   ed   ed   out  out  out  out  out"
-    "ed   ed   ed   ed   ed   ed   ed   err  err  err  err  err";
+    "top  top  top  top  top  top"
+    "ban  ban  ban  ban  ban  ban"
+    "ed   s1   s1   s2   s2   s3"
+    "ed   out  out  out  out  out"
+    "ed   err  err  err  err  err";
   gap: var(--gap);
   height: 100vh;
   padding: var(--gap);
@@ -98,6 +111,7 @@ code {
 /* --- Tiles ---------------------------------------------------------------- */
 
 .tile {
+  position: relative;
   background: var(--tile);
   border: 1px solid var(--line);
   min-width: 0;
@@ -131,6 +145,7 @@ code {
 
 .tile-tools {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -343,6 +358,113 @@ code {
   background: var(--error);
 }
 
+/* --- Separadores --------------------------------------------------------- */
+
+/* Zona de arrastre de 12px centrada en el hueco entre tiles. Al pasar el
+   mouse o arrastrar se ve una línea de 2px. */
+.splitter {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+}
+
+.splitter::after {
+  content: "";
+  position: absolute;
+  background: transparent;
+  transition: background-color 80ms;
+}
+
+.splitter:hover::after,
+.splitter.is-dragging::after {
+  background: var(--accent);
+}
+
+.splitter-x {
+  top: 0;
+  bottom: 0;
+  right: calc(-1 * var(--gap) / 2 - 7px);
+  width: 12px;
+  cursor: col-resize;
+}
+
+.splitter-x::after {
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+}
+
+.splitter-y {
+  left: 0;
+  right: 0;
+  top: calc(-1 * var(--gap) / 2 - 7px);
+  height: 12px;
+  cursor: row-resize;
+}
+
+.splitter-y::after {
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 2px;
+}
+
+/* Mientras se arrastra, el cursor no cambia al pasar sobre otros elementos
+   y no se selecciona texto. */
+.is-resizing {
+  user-select: none;
+}
+
+.resize-x * { cursor: col-resize !important; }
+.resize-y * { cursor: row-resize !important; }
+
+/* --- Errores en vivo ------------------------------------------------------ */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+}
+
+.toggle::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1px solid currentColor;
+}
+
+.toggle:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.toggle[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.toggle[aria-pressed="true"]::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle:focus {
+  outline: none;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* --- Indicadores ---------------------------------------------------------- */
 
 .stat {
@@ -527,7 +649,8 @@ code {
   }
 
   .brand-tag,
-  .divider { display: none; }
+  .divider,
+  .splitter { display: none; }
 
   .banner {
     flex-direction: column;
