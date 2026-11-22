@@ -7,7 +7,9 @@ un solo error nunca se devuelve wasm (contrato 6).
 
 import shutil
 import subprocess
+import sys
 import tempfile
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -36,6 +38,12 @@ from rustiq.semantic.analyzer import Analyzer
 WAT2WASM = "wat2wasm"
 WASM_VALIDATE = "wasm-validate"
 TOOL_TIMEOUT_S = 10
+
+# El parser y los visitors son recursivos: cada paréntesis o bloque anidado suma
+# varios marcos. La compilación corre en un hilo con pila grande y un límite de
+# recursión alto, así un programa muy anidado no tumba el proceso.
+RECURSION_LIMIT = 100_000
+THREAD_STACK_BYTES = 512 * 1024 * 1024
 
 # Los errores de backend no apuntan a una línea del programa fuente.
 BACKEND_LINE, BACKEND_COLUMN = 1, 1
@@ -159,8 +167,36 @@ def _failure(errors: list[CompileError]) -> CompileResult:
 
 
 def compile_source(source: str) -> CompileResult:
-    """Compila un programa RustiQ. Si hay un solo error, no devuelve wasm."""
-    tree, errors = parse_source(source)
+    """Compila un programa RustiQ. Si hay un solo error, no devuelve wasm.
+
+    Corre en un hilo con pila grande (ver RECURSION_LIMIT).
+    """
+    outcome: list[CompileResult] = []
+
+    def run() -> None:
+        try:
+            outcome.append(_compile(source))
+        except RecursionError as e:  # anidación más allá incluso del límite alto
+            outcome.append(_failure([_internal_error(SINTACTICO, e)]))
+
+    # El límite no se restaura: otro hilo del servidor puede estar compilando.
+    if sys.getrecursionlimit() < RECURSION_LIMIT:
+        sys.setrecursionlimit(RECURSION_LIMIT)
+    previous_stack = threading.stack_size(THREAD_STACK_BYTES)
+    try:
+        worker = threading.Thread(target=run)
+    finally:
+        threading.stack_size(previous_stack)
+    worker.start()
+    worker.join()
+    return outcome[0]
+
+
+def _compile(source: str) -> CompileResult:
+    try:
+        tree, errors = parse_source(source)
+    except Exception as e:  # un bug del parser no debe tumbar el servidor
+        return _failure([_internal_error(SINTACTICO, e)])
     if errors:
         return _failure(errors)
 
