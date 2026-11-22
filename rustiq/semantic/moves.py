@@ -17,10 +17,10 @@ el de cada rama. Así reponer una variable dentro de una rama no cuenta.
 
 Ciclos (G8): mover dentro de un ciclo una variable declarada fuera de él es error.
 
+Ya conectado desde B: `visitIdentP` llama a `check_use` y `visitLetDecl` a
+`consume` y `track_symbol`.
+
 TODO(B): llamadas que faltan desde el código de B (Byron):
-    - visitIdentP (Analyzer): `self.check_use(symbol, ctx)` al leer una variable.
-    - visitLetDecl: `self.track_symbol(symbol, initialized=ctx.expression() is not None)`
-      y `self.consume(ctx.expression())` si tiene inicializador (T4).
     - visitAssignment con `=` sobre una variable: `self.consume(ctx.expression())`
       y luego `self.mark_initialized(symbol)` (reinicializa una variable movida).
     - visitArrayLiteral: `self.consume(elemento)` por cada elemento.
@@ -67,7 +67,7 @@ class MovesMixin:
         """Mueve la variable si `expression` es solo una variable cuyo tipo no es Copy."""
         ident = moved_identifier(expression)
         symbol = self.info.symbol.get(ident) if ident is not None else None
-        if symbol is None or symbol.kind not in MOVABLE_KINDS or is_copy(symbol.type):
+        if symbol is None or symbol.kind not in MOVABLE_KINDS or symbol.type is None or is_copy(symbol.type):
             return
         if self.move_state(symbol) != AVAILABLE:
             return  # check_use ya reportó el error

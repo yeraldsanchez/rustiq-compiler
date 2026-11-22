@@ -64,45 +64,39 @@ class ScopesMixin:
         has_type_ann = ctx.type_() is not None
         has_init = ctx.expression() is not None
 
-        # T4: solo falla por falta de inferencia si no hay NI tipo NI inicializador
-        if not has_type_ann and not has_init:
+        declared_type: Type | None = self.resolve_type(ctx.type_()) if has_type_ann else None
+        init_type: Type | None = self.visit(ctx.expression()) if has_init else None
+
+        final_type: Type | None = declared_type if has_type_ann else init_type
+        if has_type_ann and has_init:
+            self.mismatch(
+                ctx.expression(),
+                E_TYPE_MISMATCH,
+                declared_type,
+                init_type,
+                f"Inicializador de '{name}'",
+            )
+        elif not has_type_ann and not has_init:
+            # T4: sin anotación ni inicializador no hay de dónde inferir el tipo
             self.error(
                 ctx,
                 E_TYPE_MISMATCH,
                 f"No se puede inferir el tipo de '{name}' sin anotación ni inicializador",
             )
-            return None
+        elif not has_type_ann and init_type == UNIT:
+            self.error(ctx, E_TYPE_MISMATCH, f"No se puede inferir el tipo de '{name}' desde '()'")
+            final_type = None
 
-        declared_type: Type | None = self.resolve_type(ctx.type_()) if has_type_ann else None
-        init_type: Type | None = self.visit(ctx.expression()) if has_init else None
-
-        final_type: Type | None = None
-        if has_type_ann and has_init:
-            if declared_type is not None:
-                self.mismatch(
-                    ctx.expression(),
-                    E_TYPE_MISMATCH,
-                    declared_type,
-                    init_type,
-                    f"Inicializador de '{name}'",
-                )
-            final_type = declared_type
-        elif has_type_ann:
-            final_type = declared_type
-        elif has_init:
-            if init_type == UNIT:
-                self.error(ctx, E_TYPE_MISMATCH, f"No se puede inferir el tipo de '{name}' desde '()'")
-                return None
-            final_type = init_type
-
-        if final_type is None:
-            if self._is_redeclared_in_current_or_params(name):
-                self.error(ctx.IDENT(), E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
-            return None
-
+        # Se declara aunque el tipo sea None (error previo): así los usos
+        # siguientes no reportan E_UNDECLARED en cascada y `mismatch` calla.
         symbol = self.declare(name, final_type, mutable, "local", ctx.IDENT())
-        if symbol is not None:
-            self.info.symbol.put(ctx, symbol)
+        if symbol is None:
+            return None
+        self.info.symbol.put(ctx, symbol)
+        if has_init:
+            self.consume(ctx.expression())
+        # Con tipo None ya hubo un error: no se reporta además "sin inicializar"
+        self.track_symbol(symbol, initialized=has_init or final_type is None)
         return None
 
     def visitIdentP(self, ctx):
@@ -113,4 +107,5 @@ class ScopesMixin:
             return None
 
         self.info.symbol.put(ctx, symbol)
+        self.check_use(symbol, ctx)
         return symbol.type
