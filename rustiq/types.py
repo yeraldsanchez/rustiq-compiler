@@ -68,6 +68,14 @@ STRING = PrimitiveT("String")
 UNIT = TupleT(())  # tipo de las funciones sin valor de retorno: ()
 
 
+def is_scalar(t: Type) -> bool:
+    """True si el valor vive directo en un local (docs/memoria.md), no detrás de un puntero.
+
+    Son los que necesitan una celda en el heap cuando se les aplica `&`.
+    """
+    return t in (I32, F64, BOOL, CHAR) or isinstance(t, RefT)
+
+
 def is_copy(t: Type) -> bool:
     """Regla única de copia (decisión G1).
 

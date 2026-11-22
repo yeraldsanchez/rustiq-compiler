@@ -67,9 +67,9 @@ class MatchGenMixin:
         """
         value_type = self.info.expr_type.get(pattern)
         if isinstance(pattern, P.BindingPatContext):
-            name = self.declare_symbol(self.info.symbol.get(pattern))
-            self.emit(f"local.get {value}")
-            self.emit(f"local.set {name}")
+            symbol = self.info.symbol.get(pattern)
+            self.declare_symbol(symbol)
+            self.store_symbol(symbol, lambda: self.emit(f"local.get {value}"))
         elif isinstance(pattern, P.LiteralPatContext):
             self.emit(f"local.get {value}")
             self.visit(pattern.literal())

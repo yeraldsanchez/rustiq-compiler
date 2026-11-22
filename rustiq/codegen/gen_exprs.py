@@ -6,11 +6,12 @@ implementó A con su permiso para cerrar movimientos. Los operadores son los de
 B en `b/etapa3-refs-borrows`, pasados por A, con cortocircuito en `&&` y `||`.
 """
 
-from rustiq.codegen.gen_structs import slot_offset
+from rustiq.codegen.gen_arrays import array_of
+from rustiq.codegen.gen_structs import SLOT_SIZE, slot_offset
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.check_exprs import operators
-from rustiq.types import BOOL, CHAR, F64, I32, RefT, StructT
+from rustiq.types import F64, StructT, Type, is_scalar
 
 # Instrucción de cada operador binario según el tipo de los operandos.
 BINARY_I32 = {
@@ -22,8 +23,21 @@ BINARY_F64 = {
     "==": "eq", "!=": "ne", "<": "lt", "<=": "le", ">": "gt", ">=": "ge",
 }
 
-# Escalares: viven en un local, no detrás de un puntero.
-SCALARS = (I32, F64, BOOL, CHAR)
+# Sufijos que nombran una ranura: se puede tomar su dirección.
+ACCESSORS = (RustiQParser.FieldSuffixContext, RustiQParser.IndexSuffixContext)
+
+
+def place_accessors(place: RustiQParser.PlaceContext):
+    """(campo, None) o (None, índice) por cada acceso del `place` después de la variable."""
+    children = place.children[1:]
+    i = 0
+    while i < len(children):
+        if children[i].getText() == ".":
+            yield children[i + 1].getText(), None
+            i += 2
+        else:  # [ expresión ]
+            yield None, children[i + 1]
+            i += 3
 
 # Escapes de un literal de char (fragmento ESC de la gramática).
 CHAR_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
@@ -55,10 +69,9 @@ class ExprsGenMixin:
     def visitLetDecl(self, ctx: RustiQParser.LetDeclContext):
         symbol = self.info.symbol.get(ctx)
         if symbol is not None:
-            lname = self.declare_symbol(symbol)
+            self.declare_symbol(symbol)
             if ctx.expression() is not None:
-                self.visit(ctx.expression())
-                self.emit(f"local.set {lname}")
+                self.store_symbol(symbol, lambda: self.visit(ctx.expression()))
 
     def visitIdentP(self, ctx: RustiQParser.IdentPContext):
         symbol = self.info.symbol.get(ctx)
@@ -89,12 +102,71 @@ class ExprsGenMixin:
             self.visit(operand)
 
     def _ref_or_deref(self, ctx, operand) -> None:
-        """`&x` y `*r` sobre structs, tuplas y arrays: la referencia es el mismo puntero."""
-        t = self.info.expr_type.get(operand)
-        target = t.target if ctx.STAR() is not None and isinstance(t, RefT) else t
-        if target in SCALARS:
-            raise NotImplementedError("referencias a escalares (celdas con address_taken)")
+        if ctx.STAR() is not None:
+            self.visit(operand)
+            target = self.info.expr_type.get(operand).target
+            if is_scalar(target):  # una referencia a escalar apunta a su celda
+                self.emit(f"{wasm_type(target)}.load")
+            return  # a un struct, tupla o array: es el mismo puntero
+        if not is_scalar(self.info.expr_type.get(operand)):
+            self.visit(operand)  # `&p` de un struct, tupla o array: el mismo puntero
+        elif self._boxed_variable(operand) is not None:
+            self.emit(f"local.get {self.cell_name(self._boxed_variable(operand))}")
+        elif isinstance(operand.children[-1], ACCESSORS):
+            self._emit_postfix_address(operand)
+        else:
+            self._emit_temporary_cell(operand)
+
+    def _boxed_variable(self, postfix):
+        """El símbolo si `postfix` es solo una variable guardada en celda; si no None."""
+        primary = postfix.primary()
+        if postfix.getChildCount() != 1 or not isinstance(primary, RustiQParser.IdentPContext):
+            return None
+        symbol = self.info.symbol.get(primary)
+        return symbol if symbol is not None and symbol.address_taken else None
+
+    def _emit_postfix_address(self, postfix) -> None:
+        """`&p.x` o `&a[i]`: la dirección de la ranura, no una copia del valor."""
+        *leading, last = postfix.children[1:]
+        self._emit_postfix_prefix(postfix.primary(), leading)
+        owner = self.info.expr_type.get(last)
+        if isinstance(last, RustiQParser.FieldSuffixContext):
+            self.emit_slot_address(owner, field=last.IDENT().getText())
+        else:
+            self.emit_slot_address(owner, index=last.expression())
+
+    def _emit_postfix_prefix(self, primary, suffixes) -> None:
+        """Igual que `visitPostfix`, pero solo con los sufijos dados."""
+        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
+            primary, RustiQParser.IdentPContext
+        ):
+            self.gen_call(primary, suffixes[0])
+            suffixes = suffixes[1:]
+        else:
+            self.visit(primary)
+        for suffix in suffixes:
+            self.visit(suffix)
+
+    def _emit_temporary_cell(self, operand) -> None:
+        """`&5` o `&f()`: guarda el valor en una celda nueva y deja su dirección."""
+        cell = self.new_temp(StructT("_"))
+        self.emit(f"i32.const {SLOT_SIZE}")
+        self.emit("call $alloc")
+        self.emit(f"local.tee {cell}")
         self.visit(operand)
+        self.emit(f"{wasm_type(self.info.expr_type.get(operand))}.store")
+        self.emit(f"local.get {cell}")
+
+    def emit_slot_address(self, owner: Type, field: str | None = None, index=None) -> Type:
+        """Con el puntero de `owner` en la pila, deja la dirección de su campo o elemento."""
+        if field is not None:
+            slot, field_type = self.field_slot(owner, field)
+            self.emit(f"i32.const {slot_offset(slot)}")
+            self.emit("i32.add")
+            return field_type
+        array = array_of(owner)
+        self.emit_element_address(index, array.size)
+        return array.elem
 
     def visitMultiplicative(self, ctx: RustiQParser.MultiplicativeContext):
         self._arithmetic_chain(ctx.unary(), operators(ctx))
@@ -147,47 +219,40 @@ class ExprsGenMixin:
     def visitAssignment(self, ctx: RustiQParser.AssignmentContext):
         symbol = self.info.symbol.get(ctx)
         op = ctx.assignOp().getText()
-        fields = self._place_fields(ctx.place())
-        if not fields:
+        accessors = list(place_accessors(ctx.place()))
+        if not accessors:
             self._assign_local(symbol, op, ctx.expression())
         else:
-            self._assign_field(symbol, fields, op, ctx.expression())
-
-    @staticmethod
-    def _place_fields(place: RustiQParser.PlaceContext) -> list[str]:
-        """Campos del `place` después de la variable. Los índices aún no se generan."""
-        children = place.children[1:]
-        if any(c.getText() == "[" for c in children):
-            raise NotImplementedError("asignar a un elemento de array")
-        return [c.getText() for c in children if c.getText() != "."]
+            self._assign_slot(symbol, accessors, op, ctx.expression())
 
     def _assign_local(self, symbol, op: str, expression) -> None:
-        name = self.local_name(symbol)
-        if op != "=":
-            self.emit(f"local.get {name}")
-        self.visit(expression)
-        if op != "=":
-            self._emit_compound(op, symbol.type)
-        self.emit(f"local.set {name}")
+        def value() -> None:
+            if op != "=":
+                self.load_symbol(symbol)
+            self.visit(expression)
+            if op != "=":
+                self._emit_compound(op, symbol.type)
 
-    def _assign_field(self, symbol, fields: list[str], op: str, expression) -> None:
-        """`p.a.b = v`: carga el puntero del último struct y guarda en su ranura."""
+        self.store_symbol(symbol, value)
+
+    def _assign_slot(self, symbol, accessors, op: str, expression) -> None:
+        """`p.a[i].b = v`: recorre las ranuras hasta la última y guarda ahí."""
         self.load_symbol(symbol)
         owner = symbol.type
-        for field in fields[:-1]:
-            index, owner = self.field_slot(owner, field)
-            self.emit(f"i32.load offset={slot_offset(index)}")
-        index, field_type = self.field_slot(owner, fields[-1])
-        offset, wt = slot_offset(index), wasm_type(field_type)
-        if op != "=":  # el puntero se usa dos veces: leer el valor anterior y guardar
-            pointer = self.new_temp(StructT("_"))
-            self.emit(f"local.tee {pointer}")
-            self.emit(f"local.get {pointer}")
-            self.emit(f"{wt}.load offset={offset}")
+        for i, (field, index) in enumerate(accessors):
+            owner = self.emit_slot_address(owner, field, index)
+            if i < len(accessors) - 1:
+                self.emit("i32.load")  # una ranura intermedia guarda un puntero
+        wt = wasm_type(owner)
+        if op != "=":  # la dirección se usa dos veces: leer el valor anterior y guardar
+            address = self.new_temp(StructT("_"))
+            self.emit(f"local.tee {address}")
+            self.emit(f"local.get {address}")
+            self.emit(f"{wt}.load")
         self.visit(expression)
         if op != "=":
-            self._emit_compound(op, field_type)
-        self.emit(f"{wt}.store offset={offset}")
+            self._emit_compound(op, owner)
+        self.emit(f"{wt}.store")
 
     def _emit_compound(self, op: str, t) -> None:
         table = COMPOUND_F64 if t == F64 else COMPOUND_I32

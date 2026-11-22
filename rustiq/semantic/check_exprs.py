@@ -16,7 +16,7 @@ from antlr4.tree.Tree import TerminalNode
 
 from rustiq.errors import E_BAD_OPERAND, E_BORROW_CONFLICT, E_BORROW_MUT_IMMUTABLE, E_TYPE_MISMATCH
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.types import BOOL, CHAR, F64, I32, STRING, RefT, Type
+from rustiq.types import BOOL, CHAR, F64, I32, STRING, RefT, Type, is_scalar
 
 NUMERIC = (I32, F64)
 EQUATABLE = (I32, F64, BOOL, CHAR)
@@ -51,6 +51,10 @@ class ExprsMixin:
                 target_name = primary.IDENT().getText()
             symbol = self.lookup(target_name) if target_name else None
             is_mut = ctx.MUT() is not None
+            whole_variable = ctx.postfix().getChildCount() == 1  # `&x`, no `&x.campo`
+            variable = symbol is not None and symbol.kind in ("local", "param")
+            if variable and whole_variable and inner is not None and is_scalar(inner):
+                symbol.address_taken = True  # el codegen lo guarda en una celda del heap
             if symbol is not None:
                 if is_mut:
                     if not symbol.mutable:
