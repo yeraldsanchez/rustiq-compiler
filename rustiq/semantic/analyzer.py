@@ -11,6 +11,7 @@ from rustiq.errors import E_NOT_CALLABLE, SEMANTICO, CompileError
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.semantic.borrows import BorrowsMixin
+from rustiq.semantic.check_assign import AssignMixin
 from rustiq.semantic.check_arrays import ArraysMixin
 from rustiq.semantic.check_control import ControlMixin
 from rustiq.semantic.check_exprs import ExprsMixin
@@ -28,7 +29,7 @@ from rustiq.types import Type
 class Analyzer(
     ItemsMixin, StructsMixin, ControlMixin, MatchMixin, MovesMixin,  # A
     ScopesMixin, ExprsMixin, ArraysMixin, RefsMixin,  # B
-    BorrowsMixin,  # B
+    BorrowsMixin, AssignMixin,  # B; AssignMixin va después: BorrowsMixin lo llama con super()
     ScopeDefaults,  # respaldo del contrato de ámbitos; ScopesMixin lo reemplaza
     RustiQVisitor,
 ):

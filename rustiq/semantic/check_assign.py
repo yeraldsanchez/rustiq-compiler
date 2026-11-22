@@ -1,0 +1,103 @@
+"""Asignación: `=`, `+=`, `-=`, `*=`, `/=` sobre un `place`.
+
+Dueño: B (Byron). Lo implementó A con su permiso para cerrar movimientos.
+
+Va después de `BorrowsMixin` en la herencia: `BorrowsMixin.visitAssignment`
+revisa el préstamo activo y llama a este con `super()`.
+
+Reglas:
+- Solo se asigna a variables `mut`. La excepción es la primera asignación de
+  un `let x: T;` sin inicializador.
+- Con `p.campo = v` basta con que `p` sea `mut` o una `&mut`.
+- `+=` y compañía solo sobre `i32` y `f64`, y leen el valor anterior.
+- `x = v` mueve `v` y deja `x` disponible otra vez (reinicialización).
+"""
+
+from rustiq.errors import E_ASSIGN_IMMUTABLE, E_BAD_INDEX, E_BAD_OPERAND, E_TYPE_MISMATCH, E_UNDECLARED, E_UNKNOWN_FIELD
+from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.moves import UNINITIALIZED
+from rustiq.types import F64, I32, ArrayT, RefT, StructT, Type
+
+ASSIGNABLE_KINDS = ("local", "param")
+NUMERIC = (I32, F64)
+
+
+class AssignMixin:
+    def visitAssignment(self, ctx: P.AssignmentContext):
+        place = ctx.place()
+        root = place.IDENT(0)
+        value = self.visit(ctx.expression())
+        symbol = self.lookup(root.getText())
+        if symbol is None:
+            self.error(root, E_UNDECLARED, f"Identificador '{root.getText()}' no declarado")
+            return None
+        self.info.symbol.put(ctx, symbol)
+
+        op = ctx.assignOp().getText()
+        whole = place.getChildCount() == 1  # `x = ...`, sin campos ni índices
+        if not (whole and op == "="):
+            self.check_use(symbol, root)  # se lee el valor anterior o una parte
+        self._check_mutable(symbol, root, whole and op == "=")
+
+        target = self._place_type(place, symbol.type)
+        if target is not None:
+            self._check_value(ctx, op, target, value)
+        if op == "=":
+            self.consume(ctx.expression())
+            if whole:
+                self.mark_initialized(symbol)
+        return None
+
+    def _check_mutable(self, symbol, root, replaces_whole: bool) -> None:
+        if symbol.kind not in ASSIGNABLE_KINDS:
+            self.error(root, E_ASSIGN_IMMUTABLE, f"No se puede asignar a '{symbol.name}'")
+        elif symbol.mutable:
+            return
+        elif replaces_whole and self.move_state(symbol) == UNINITIALIZED:
+            return  # primera asignación de `let x: T;`
+        elif not replaces_whole and isinstance(symbol.type, RefT) and symbol.type.mutable:
+            return  # `p.campo = v` con `p: &mut T`
+        else:
+            self.error(root, E_ASSIGN_IMMUTABLE, f"'{symbol.name}' no es mut y no se puede asignar")
+
+    def _place_type(self, place: P.PlaceContext, current: Type | None) -> Type | None:
+        """Tipo de lo que se asigna, recorriendo los campos e índices del `place`."""
+        children = place.children[1:]
+        i = 0
+        while i < len(children) and current is not None:
+            if children[i].getText() == ".":
+                current = self._field_type(current, children[i + 1])
+                i += 2
+            else:  # [ expresión ]
+                current = self._index_type(current, children[i + 1])
+                i += 3
+        return current
+
+    def _field_type(self, operand: Type, ident) -> Type | None:
+        base = operand.target if isinstance(operand, RefT) else operand
+        name = ident.getText()
+        if not isinstance(base, StructT):
+            self.error(ident, E_BAD_OPERAND, f"El tipo {operand} no tiene campos")
+            return None
+        fields = self.info.structs[base.name].fields
+        if name not in fields:
+            self.error(ident, E_UNKNOWN_FIELD, f"'{base.name}' no tiene el campo '{name}'")
+            return None
+        return fields[name]
+
+    def _index_type(self, operand: Type, index) -> Type | None:
+        base = operand.target if isinstance(operand, RefT) else operand
+        index_type = self.visit(index)
+        self.mismatch(index, E_TYPE_MISMATCH, I32, index_type, "El índice")
+        if not isinstance(base, ArrayT):
+            self.error(index, E_BAD_INDEX, f"El tipo {operand} no se puede indexar")
+            return None
+        return base.elem
+
+    def _check_value(self, ctx, op: str, target: Type, value: Type | None) -> None:
+        if op != "=" and target not in NUMERIC:
+            self.error(ctx.assignOp(), E_BAD_OPERAND, f"'{op}' solo se usa con i32 o f64, no con {target}")
+            return
+        if value is not None:
+            self.info.expr_type.put(ctx.expression(), value)
+        self.mismatch(ctx.expression(), E_TYPE_MISMATCH, target, value, "El valor asignado")
