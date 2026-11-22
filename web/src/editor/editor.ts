@@ -10,8 +10,9 @@ import { EditorSelection, Prec, type Text } from "@codemirror/state";
 import { EditorView, keymap, type Command } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 
-import { PHASE_LABEL, type CompileError } from "../types";
+import { PHASE_LABEL, type CompileError, type SymbolHint } from "../types";
 import { rustiqCompletion } from "./completion";
+import { setSymbols, symbolHoverExtension, toRanges } from "./hover";
 import { editorChrome, rustHighlighting } from "./theme";
 
 // Sangría de 4 espacios, como en Rust.
@@ -28,6 +29,8 @@ export interface Editor {
   getSource(): string;
   setSource(source: string): void;
   showErrors(errors: CompileError[]): void;
+  /** Pistas para el tipo al pasar el mouse, de la última compilación. */
+  showSymbols(symbols: SymbolHint[]): void;
   goTo(line: number, column: number): void;
 }
 
@@ -54,6 +57,7 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
       indentUnit.of(INDENT),
       lintGutter(),
       rustiqCompletion,
+      symbolHoverExtension,
       editorChrome,
       rustHighlighting,
       shortcuts,
@@ -82,6 +86,10 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
     showErrors(errors) {
       const diagnostics = errors.map((e) => toDiagnostic(view.state.doc, e));
       view.dispatch(setDiagnostics(view.state, diagnostics));
+    },
+
+    showSymbols(symbols) {
+      view.dispatch({ effects: setSymbols.of(toRanges(view.state.doc, symbols)) });
     },
 
     goTo(line, column) {

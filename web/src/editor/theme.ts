@@ -79,6 +79,20 @@ const chrome = EditorView.theme(
     "li[aria-selected] .cm-completionDetail": { color: "inherit" },
     ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700" },
     ".cm-panels": { backgroundColor: "var(--tile-2)", color: "var(--text)" },
+    ".cm-symbol-hover": { padding: "6px 10px", borderLeft: "3px solid var(--accent)" },
+    ".cm-symbol-signature": {
+      display: "block",
+      fontFamily: "var(--font-mono)",
+      fontSize: "12.5px",
+      color: "var(--text)",
+      whiteSpace: "pre",
+    },
+    ".cm-symbol-detail": {
+      marginTop: "2px",
+      color: "var(--muted)",
+      fontFamily: "var(--font-ui)",
+      fontSize: "12px",
+    },
   },
   { dark: true },
 );

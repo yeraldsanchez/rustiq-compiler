@@ -32,6 +32,7 @@ from rustiq.errors import (
 from rustiq.generated.RustiQLexer import RustiQLexer
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.analyzer import Analyzer
+from rustiq.symbols import SymbolHint, collect_symbols
 
 WAT2WASM = "wat2wasm"
 WASM_VALIDATE = "wasm-validate"
@@ -47,6 +48,9 @@ class CompileResult:
     errors: list[CompileError] = field(default_factory=list)
     wat: str | None = None
     wasm: bytes | None = None
+    # Para el editor: qué es cada identificador. Llega aunque haya errores
+    # semánticos; con errores de sintaxis queda vacío.
+    symbols: list[SymbolHint] = field(default_factory=list)
 
 
 class BackendError(Exception):
@@ -154,8 +158,16 @@ def _internal_error(phase: str, exc: Exception) -> CompileError:
     return CompileError(phase, E_INTERNAL, message, BACKEND_LINE, BACKEND_COLUMN)
 
 
-def _failure(errors: list[CompileError]) -> CompileResult:
-    return CompileResult(ok=False, errors=errors)
+def _failure(errors: list[CompileError], symbols: list[SymbolHint] | None = None) -> CompileResult:
+    return CompileResult(ok=False, errors=errors, symbols=symbols or [])
+
+
+def _safe_symbols(tree, info) -> list[SymbolHint]:
+    """Los símbolos son una ayuda del editor: si fallan, no afectan la compilación."""
+    try:
+        return collect_symbols(tree, info)
+    except Exception:
+        return []
 
 
 def compile_source(source: str) -> CompileResult:
@@ -168,15 +180,16 @@ def compile_source(source: str) -> CompileResult:
         info, errors = Analyzer().analyze(tree)
     except Exception as e:  # un bug del analizador no debe tumbar el servidor
         return _failure([_internal_error(SEMANTICO, e)])
+    symbols = _safe_symbols(tree, info)
     if errors:
-        return _failure(errors)
+        return _failure(errors, symbols)
 
     try:
         wat = Emitter(info).generate(tree)
         wasm = assemble(wat)
     except BackendError as e:
-        return _failure([e.error])
+        return _failure([e.error], symbols)
     except Exception as e:  # un bug del codegen no debe tumbar el servidor
-        return _failure([_internal_error(BACKEND, e)])
+        return _failure([_internal_error(BACKEND, e)], symbols)
 
-    return CompileResult(ok=True, wat=wat, wasm=wasm)
+    return CompileResult(ok=True, wat=wat, wasm=wasm, symbols=symbols)

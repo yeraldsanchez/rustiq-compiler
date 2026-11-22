@@ -3,8 +3,11 @@
 Contrato 6 del plan:
 
     POST /compile  { "source": "..." }
-    → { "ok": true,  "errors": [], "wat": "...", "wasm_base64": "..." }
-    → { "ok": false, "errors": [CompileError...], "wat": null, "wasm_base64": null }
+    → { "ok": true,  "errors": [], "wat": "...", "wasm_base64": "...", "symbols": [...] }
+    → { "ok": false, "errors": [CompileError...], "wat": null, "wasm_base64": null, "symbols": [...] }
+
+`symbols` es una extensión para el editor (tipo al pasar el mouse): qué es
+cada identificador. Llega aunque haya errores semánticos.
 
 También sirve el editor ya construido (`web/dist/`) en `/`, así el editor y
 la API comparten origen. `web/dist/` está en el repo para no necesitar Node;
@@ -42,11 +45,25 @@ class ErrorOut(BaseModel):
     length: int
 
 
+class SymbolOut(BaseModel):
+    """Forma JSON de `rustiq.symbols.SymbolHint`."""
+
+    line: int
+    column: int
+    length: int
+    name: str
+    kind: str
+    type: str | None
+    mutable: bool
+    declaration: bool
+
+
 class CompileResponse(BaseModel):
     ok: bool
     errors: list[ErrorOut]
     wat: str | None
     wasm_base64: str | None
+    symbols: list[SymbolOut] = []
 
 
 app = FastAPI(title="RustiQ")
@@ -65,6 +82,7 @@ def compile_endpoint(request: CompileRequest) -> CompileResponse:
         errors=[ErrorOut(**e.to_dict()) for e in result.errors],
         wat=result.wat,
         wasm_base64=wasm_base64,
+        symbols=[SymbolOut(**s.to_dict()) for s in result.symbols],
     )
 
 

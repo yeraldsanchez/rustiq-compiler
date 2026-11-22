@@ -96,6 +96,7 @@ function showCompileResult(result: CompileResponse, elapsedMs: number): void {
   setModule(result.wat, wasm);
   renderErrors(result.errors, goToError);
   editor.showErrors(result.errors);
+  editor.showSymbols(result.symbols ?? []);
   if (result.ok) setState("Compilado", "ok");
   else setState(errorCountLabel(result.errors.length), "error");
 }
