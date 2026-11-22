@@ -26,10 +26,16 @@ const chrome = EditorView.theme(
       border: "none",
     },
     ".cm-lineNumbers .cm-gutterElement": { minWidth: "36px", padding: "0 12px 0 0" },
-    ".cm-activeLine": { backgroundColor: "var(--hover)" },
+    // Semitransparente: CodeMirror dibuja la selección debajo de las líneas y
+    // un fondo opaco la taparía.
+    ".cm-activeLine": { backgroundColor: "rgba(255, 255, 255, 0.04)" },
     ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--text)" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-      backgroundColor: "rgba(242, 107, 29, 0.25) !important",
+    // Mismo selector que el tema base de CodeMirror, para ganarle.
+    "& > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "rgba(242, 107, 29, 0.22)",
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "rgba(242, 107, 29, 0.34)",
     },
     ".cm-matchingBracket": {
       backgroundColor: "transparent",

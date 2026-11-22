@@ -1,12 +1,13 @@
 /** Editor de código: CodeMirror 6 con resaltado de Rust y los errores del
  *  compilador marcados en el texto. */
 
-import { indentWithTab } from "@codemirror/commands";
+import { acceptCompletion } from "@codemirror/autocomplete";
+import { indentLess, indentMore } from "@codemirror/commands";
 import { rust } from "@codemirror/lang-rust";
 import { indentUnit } from "@codemirror/language";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { EditorSelection, Prec, type Text } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, keymap, type Command } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 
 import { PHASE_LABEL, type CompileError } from "../types";
@@ -37,9 +38,10 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
       { key: "Mod-b", run: () => (callbacks.onCompile(), true) },
       // El código se guarda solo; esto evita el diálogo de guardar del navegador.
       { key: "Mod-s", run: () => true },
-      // Tab indenta en vez de mover el foco. Para salir del editor con el
-      // teclado: Esc y luego Tab (comportamiento de CodeMirror).
-      indentWithTab,
+      // Tab acepta la sugerencia abierta; si no hay, inserta sangría en vez de
+      // mover el foco. Para salir del editor con el teclado: Esc y luego Tab.
+      { key: "Tab", run: acceptCompletion },
+      { key: "Tab", run: insertTab, shift: indentLess },
     ]),
   );
 
@@ -89,6 +91,24 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
     },
   };
 }
+
+/** Sin selección, inserta espacios en el cursor hasta la siguiente columna
+ *  múltiplo de la sangría (no mueve el texto que está antes del cursor).
+ *  Con texto seleccionado, indenta las líneas completas. */
+const insertTab: Command = (view) => {
+  const { state } = view;
+  if (state.selection.ranges.some((range) => !range.empty)) return indentMore(view);
+  const transaction = state.changeByRange((range) => {
+    const column = range.head - state.doc.lineAt(range.head).from;
+    const spaces = INDENT.length - (column % INDENT.length);
+    return {
+      changes: { from: range.head, insert: " ".repeat(spaces) },
+      range: EditorSelection.cursor(range.head + spaces),
+    };
+  });
+  view.dispatch(state.update(transaction, { scrollIntoView: true, userEvent: "input" }));
+  return true;
+};
 
 /** Pasa línea y columna del compilador (desde 1) a un desplazamiento en el
  *  documento. Se acota por si el texto cambió desde que se compiló. */
