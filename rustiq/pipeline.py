@@ -23,6 +23,9 @@ from rustiq.errors import (
     BACKEND,
     E_INTERNAL,
     E_INVALID_CHAR,
+    E_INVALID_ESCAPE,
+    E_UNTERMINATED_COMMENT,
+    E_UNTERMINATED_STRING,
     E_SYNTAX,
     E_WASM_INVALID,
     E_WAT_INVALID,
@@ -69,10 +72,9 @@ class BackendError(Exception):
 
 
 class _ErrorCollector(ErrorListener):
-    """PROVISIONAL hasta que llegue `rustiq/syntax_errors.py` (B, Byron).
+    """Errores sintácticos de ANTLR como CompileError en vez de imprimirlos.
 
-    Junta los errores de ANTLR como CompileError en vez de imprimirlos.
-    Byron lo reemplaza con códigos precisos y mensajes en español.
+    Los léxicos van aparte: `_LexErrorCollector` y los tokens de error del lexer.
     """
 
     def __init__(self, phase: str, code: str) -> None:
@@ -88,19 +90,91 @@ class _ErrorCollector(ErrorListener):
         )
 
 
+class _LexErrorCollector(ErrorListener):
+    """Caracteres que no forman ningún token (`#`, `ñ`, `@`...)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.errors: list[CompileError] = []
+
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        lexer = recognizer
+        char = lexer._input.getText(lexer._tokenStartCharIndex, lexer._tokenStartCharIndex)
+        self.errors.append(
+            CompileError(LEXICO, E_INVALID_CHAR, f"Carácter no válido: {char!r}", line, column + 1, 1)
+        )
+
+
+VALID_ESCAPES = set("ntr\\\"'")
+ESCAPES_HELP = "se aceptan \\n, \\t, \\r, \\\\, \\\" y \\'"
+
+
+def _bad_escape(token) -> CompileError | None:
+    """El primer escape no válido dentro de un literal, o None."""
+    text = token.text
+    i = 1
+    while i < len(text) - 1:
+        if text[i] == "\\":
+            if text[i + 1] not in VALID_ESCAPES:
+                return CompileError(
+                    LEXICO, E_INVALID_ESCAPE,
+                    f"Secuencia de escape no válida '\\{text[i + 1]}'; {ESCAPES_HELP}",
+                    token.line, token.column + i + 1, 2,
+                )
+            i += 2
+        else:
+            i += 1
+    return None
+
+
+def _error_token(token) -> CompileError:
+    """Convierte un token de error del lexer (canal oculto) en un error léxico."""
+    T = RustiQLexer
+    line, column, length = token.line, token.column + 1, max(len(token.text), 1)
+    if token.type == T.UNTERMINATED_COMMENT:
+        return CompileError(LEXICO, E_UNTERMINATED_COMMENT, "Comentario de bloque sin cerrar: falta '*/'", line, column, 2)
+    if token.type == T.UNTERMINATED_STRING:
+        return CompileError(
+            LEXICO, E_UNTERMINATED_STRING,
+            "String sin cerrar: falta la comilla '\"' antes del fin de la línea", line, column, length,
+        )
+    if token.type == T.UNTERMINATED_CHAR:
+        return CompileError(
+            LEXICO, E_INVALID_CHAR, "Literal char sin cerrar: falta la comilla \"'\"", line, column, length,
+        )
+    escape = _bad_escape(token)
+    if escape is not None:
+        return escape
+    return CompileError(  # BAD_CHAR sin escapes malos: vacío o con varios caracteres
+        LEXICO, E_INVALID_CHAR, "Un literal char lleva exactamente un carácter", line, column, length,
+    )
+
+
+ERROR_TOKENS = {
+    RustiQLexer.BAD_STRING,
+    RustiQLexer.UNTERMINATED_STRING,
+    RustiQLexer.BAD_CHAR,
+    RustiQLexer.UNTERMINATED_CHAR,
+    RustiQLexer.UNTERMINATED_COMMENT,
+}
+
+
 def parse_source(source: str):
     """Devuelve (árbol, errores léxicos y sintácticos ordenados por posición)."""
     lexer = RustiQLexer(InputStream(source))
-    parser = RustiQParser(CommonTokenStream(lexer))
-    lex_errors = _ErrorCollector(LEXICO, E_INVALID_CHAR)
+    tokens = CommonTokenStream(lexer)
+    parser = RustiQParser(tokens)
+    lex_errors = _LexErrorCollector()
     syntax_errors = _ErrorCollector(SINTACTICO, E_SYNTAX)
     for recognizer, listener in ((lexer, lex_errors), (parser, syntax_errors)):
         recognizer.removeErrorListeners()
         recognizer.addErrorListener(listener)
 
+    tokens.fill()
+    token_errors = [_error_token(t) for t in tokens.tokens if t.type in ERROR_TOKENS]
     tree = parser.program()
-    errors = sorted(lex_errors.errors + syntax_errors.errors, key=lambda e: (e.line, e.column))
-    return tree, errors
+    errors = lex_errors.errors + token_errors + syntax_errors.errors
+    return tree, sorted(errors, key=lambda e: (e.line, e.column))
 
 
 # --- Backend ---------------------------------------------------------------

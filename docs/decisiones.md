@@ -49,6 +49,7 @@ Criterio del profesor (9 de noviembre de 2026): la gramática se sigue tal como 
 | T3 | `&&x` | No soportado. `unary` acepta un solo prefijo, así que la EBNF tampoco permite `& &x` |
 | T4 | `let` sin inicializador | Válido si el tipo se indica y se asigna antes de usarse. Cuenta como asignada si se le asigna en todas las ramas de un `if` con `else` o de un `match` Reutiliza el estado "sin inicializar" de movimientos |
 | T5 | Bloque anidado como valor final | ANTLR lee `{ { 3 } }` con el bloque interno como sentencia. Si la última sentencia de un bloque es otro bloque que produce valor y no hay otra expresión final, ese bloque es la expresión final (`flow.block_tail`) |
+| T6 | Errores léxicos | El lexer tiene tokens de error en el canal oculto (`BAD_STRING`, `UNTERMINATED_STRING`, `BAD_CHAR`, `UNTERMINATED_CHAR`, `UNTERMINATED_COMMENT`). El parser no los ve y el pipeline los reporta como `E_UNTERMINATED_STRING`, `E_INVALID_ESCAPE`, `E_UNTERMINATED_COMMENT` o `E_INVALID_CHAR`, con la posición exacta |
 
 ## Soportado
 

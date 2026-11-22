@@ -365,6 +365,15 @@ STRING_LIT
     : '"' ( ~["\\\r\n] | ESC )* '"'
     ;
 
+// Tokens de error, en el canal oculto: el parser no los ve y el pipeline los convierte en errores
+// léxicos con código propio. Van después de los literales válidos: con el mismo
+// largo gana el primero, así solo coinciden cuando el literal está mal.
+BAD_STRING          : '"' ( ~["\\\r\n] | '\\' ~[\r\n] )* '"' -> channel(HIDDEN) ;   // escape no válido
+UNTERMINATED_STRING : '"' ( ~["\\\r\n] | '\\' ~[\r\n] )* -> channel(HIDDEN) ;       // sin '"' antes del fin de línea
+BAD_CHAR            : '\'' ( ~['\\\r\n] | '\\' ~[\r\n] )* '\'' -> channel(HIDDEN) ;  // vacío, varios caracteres o escape no válido
+UNTERMINATED_CHAR   : '\'' ( ~['\\\r\n] | '\\' ~[\r\n] )* -> channel(HIDDEN) ;
+UNTERMINATED_COMMENT: '/*' ( ~'*' | '*'+ ~[*/] )* '*'* EOF -> channel(HIDDEN) ;
+
 fragment ESC   : '\\' [\\ntr"'] ;
 fragment DIGIT : [0-9] ;
 

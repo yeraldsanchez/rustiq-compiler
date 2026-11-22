@@ -1,0 +1,5 @@
+// ERROR lexico E_UNTERMINATED_COMMENT 4:1
+fn main() {
+}
+/* este comentario nunca se cierra
+fn otra() {}
