@@ -13,7 +13,9 @@ Vida de un préstamo:
 Una función que devuelve `&T` no puede devolver una referencia a algo que
 muere con ella (`E_RETURN_LOCAL_REF`): una variable o parámetro por valor, un
 temporal (`&5`, `&f()`), o una variable-referencia que apunta a algo así.
-Seguir una referencia recibida (`&p.x` con `p: &Punto`) sí vale.
+Seguir una referencia recibida (`&p.x` con `p: &Punto`) sí vale. Se siguen también
+llamadas que devuelven `&T` (sin anotaciones de vida, el resultado puede venir
+de cualquier argumento), los brazos de un `match` y el valor final de un bloque.
 """
 
 from dataclasses import dataclass
@@ -127,7 +129,7 @@ class BorrowsMixin:
             return symbol is not None and symbol.uid in self._local_refs
         operand = borrowed_operand(expression)
         if operand is None:
-            return False  # no es `&...`
+            return self._value_points_to_local(expression)
         primary = operand.primary()
         symbol = self.info.symbol.get(primary) if isinstance(primary, P.IdentPContext) else None
         if symbol is None:
@@ -135,6 +137,24 @@ class BorrowsMixin:
         if isinstance(symbol.type, RefT) and operand.getChildCount() > 1:
             return symbol.uid in self._local_refs  # `&r.x`: se sigue la referencia r
         return symbol.kind in ("local", "param")
+
+    def _value_points_to_local(self, expression) -> bool:
+        """Sigue llamadas, `match` y bloques: `id(&x)`, `match c { _ => &x }`, `{ &x }`."""
+        call = _call_of(expression)
+        if call is not None:
+            callee, suffix = call
+            sig = self.info.functions.get(callee.IDENT().getText())
+            if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
+                return False
+            # Sin anotaciones de vida, el resultado puede venir de cualquier argumento.
+            return any(self.points_to_local(arg) for arg in suffix.argumentList().expression())
+        primary = _bare_primary(expression)
+        if isinstance(primary, P.MatchPContext):
+            return any(self.points_to_local(arm.expression()) for arm in primary.matchExpr().matchArm())
+        if isinstance(primary, P.BlockPContext):
+            tail = primary.block().expression()
+            return tail is not None and self.points_to_local(tail)
+        return False
 
     # --- Reglas ----------------------------------------------------------------
 
@@ -194,6 +214,20 @@ def borrowed_roots(analyzer, expression) -> list:
     if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
         return []
     return [root for arg in suffix.argumentList().expression() for root in borrowed_roots(analyzer, arg)]
+
+
+def _bare_primary(expression):
+    """El `primary` si la expresión es solo eso (sin operadores ni sufijos), si no None."""
+    node = expression
+    while True:
+        if isinstance(node, P.PostfixContext):
+            return node.primary() if node.getChildCount() == 1 else None
+        if isinstance(node, P.ParenPContext):
+            node = node.expression()
+        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
+            node = node.getChild(0)
+        else:
+            return None
 
 
 def _call_of(expression):

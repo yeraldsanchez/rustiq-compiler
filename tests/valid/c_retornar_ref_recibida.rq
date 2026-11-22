@@ -1,0 +1,18 @@
+// Devolver una referencia que llegó como parámetro sí se puede.
+fn mismo(a: &i32) -> &i32 {
+    a
+}
+
+fn mayor(a: &i32, b: &i32) -> &i32 {
+    match *a > *b {
+        true => mismo(a),
+        false => b,
+    }
+}
+
+fn main() {
+    let x = 3;
+    let y = 8;
+    print_i32(*mayor(&x, &y));
+    print_i32(*mayor(&y, &x));
+}
