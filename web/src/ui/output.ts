@@ -2,6 +2,7 @@
  *  También copia y descarga el resultado de la última compilación. */
 
 import { dom } from "../dom";
+import { createWatView } from "../editor/watView";
 
 type Tab = "output" | "wat";
 
@@ -17,6 +18,8 @@ let wasm: Uint8Array<ArrayBuffer> | null = null;
 let pending: string[] = [];
 let consoleText: HTMLPreElement | null = null;
 let frame = 0;
+
+const watView = createWatView(dom.watHost);
 
 function emptyMessage(text: string): HTMLParagraphElement {
   const p = document.createElement("p");
@@ -66,9 +69,10 @@ export function selectTab(tab: Tab): void {
 export function setModule(newWat: string | null, newWasm: Uint8Array<ArrayBuffer> | null): void {
   wat = newWat;
   wasm = newWasm;
-  dom.paneWat.replaceChildren(
-    wat === null ? emptyMessage("No hay WAT: el programa tiene errores de compilación.") : line(wat, "wat"),
-  );
+  dom.watHost.hidden = wat === null;
+  dom.watEmpty.hidden = wat !== null;
+  if (wat === null) dom.watEmpty.textContent = "No hay WAT: el programa tiene errores de compilación.";
+  else watView.setText(wat);
   refreshTools();
 }
 

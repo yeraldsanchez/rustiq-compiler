@@ -28,6 +28,8 @@ export const dom = {
   tabWat: byId<HTMLButtonElement>("tab-wat"),
   paneOutput: byId<HTMLDivElement>("pane-output"),
   paneWat: byId<HTMLDivElement>("pane-wat"),
+  watEmpty: byId<HTMLParagraphElement>("wat-empty"),
+  watHost: byId<HTMLDivElement>("wat-host"),
   copyButton: byId<HTMLButtonElement>("btn-copy"),
   downloadWatButton: byId<HTMLButtonElement>("btn-dl-wat"),
   downloadWasmButton: byId<HTMLButtonElement>("btn-dl-wasm"),

@@ -433,11 +433,25 @@ code {
   color: var(--warn);
 }
 
-/* El WAT conserva sus líneas y se desplaza en horizontal. */
-.console .wat {
-  color: var(--text-2);
-  white-space: pre;
-  width: max-content;
+/* Vista del WAT: CodeMirror ocupa todo el panel. */
+.pane-code {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pane-code .empty {
+  padding: 12px var(--pad);
+}
+
+.code-host {
+  flex: 1;
+  min-height: 0;
+}
+
+.code-host .cm-editor {
+  height: 100%;
 }
 
 /* --- Errores -------------------------------------------------------------- */
