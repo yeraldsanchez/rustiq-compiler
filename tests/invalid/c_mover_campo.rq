@@ -1,4 +1,4 @@
-// ERROR semantico E_MOVE_OUT_OF_PLACE 14:17
+// ERROR semantico E_USE_AFTER_MOVE 16:15
 struct Dentro {
     v: i32,
 }
@@ -10,7 +10,7 @@ struct Fuera {
 
 fn main() {
     let f = Fuera { d: Dentro { v: 1 }, k: 2 };
-    // Si se aceptara, q y f.d compartirían memoria.
+    // Mover un campo mueve toda la variable: así q y f.d no comparten memoria.
     let mut q = f.d;
     q.v = 99;
     print_i32(f.d.v);

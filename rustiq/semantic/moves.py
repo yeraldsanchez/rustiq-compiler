@@ -30,7 +30,7 @@ from antlr4 import ParserRuleContext
 
 from rustiq.errors import E_MOVE_OUT_OF_PLACE, E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.types import is_copy
+from rustiq.types import RefT, is_copy
 
 # Estados de un símbolo
 AVAILABLE = "available"
@@ -66,23 +66,41 @@ class MovesMixin:
     def consume(self, expression) -> None:
         """Mueve la variable si `expression` es solo una variable cuyo tipo no es Copy.
 
-        Un campo, un elemento o un `*r` que no es Copy no se puede mover: el
-        valor seguiría siendo accesible desde su dueño y los dos compartirían
-        memoria. Se reporta E_MOVE_OUT_OF_PLACE.
+        Mover un campo o un elemento que no es Copy (`p.nombre`, `a[0]`) mueve la
+        variable entera: después no se puede usar ninguna parte de `p` ni de `a`.
+        Así el valor movido y su dueño nunca comparten memoria. Mover desde una
+        referencia (`*r`, `r.campo` con `r: &T`) es E_MOVE_OUT_OF_PLACE.
         """
         place = borrowed_place(expression)
         if place is not None:
             place_type = self.info.expr_type.get(place)
-            if place_type is not None and not is_copy(place_type):
+            if place_type is None or is_copy(place_type):
+                return
+            if isinstance(place, P.UnaryContext) or self._through_ref(place):
                 self.error(
                     place, E_MOVE_OUT_OF_PLACE,
-                    f"No se puede mover '{place.getText()}' ({place_type}) fuera de un campo, "
-                    "un elemento o una referencia; usa '&' para prestarlo",
+                    f"No se puede mover '{place.getText()}' ({place_type}) fuera de una referencia; "
+                    "usa '&' para prestarlo",
                 )
+                return
+            root = owned_root(place)
+            root_symbol = self.info.symbol.get(root) if root is not None else None
+            if root_symbol is not None:  # sin variable raíz es un temporal: nada que marcar
+                self._move_symbol(root, root_symbol)
             return
         ident = moved_identifier(expression)
         symbol = self.info.symbol.get(ident) if ident is not None else None
-        if symbol is None or symbol.kind not in MOVABLE_KINDS or symbol.type is None or is_copy(symbol.type):
+        if symbol is None or symbol.type is None or is_copy(symbol.type):
+            return
+        self._move_symbol(ident, symbol)
+
+    def _through_ref(self, place) -> bool:
+        """True si algún tramo de `a.b[i]` pasa por una referencia (auto-deref)."""
+        return any(isinstance(self.info.expr_type.get(s), RefT) for s in place.children[1:])
+
+    def _move_symbol(self, ident, symbol) -> None:
+        """Marca `symbol` como movido, salvo que esté prestado o fuera del ciclo."""
+        if symbol.kind not in MOVABLE_KINDS:
             return
         if self.move_state(symbol) != AVAILABLE:
             return  # check_use ya reportó el error
@@ -177,6 +195,12 @@ def borrowed_place(node):
             node = node.getChild(0)
         else:
             return None
+
+
+def owned_root(place):
+    """El `IdentP` raíz de `a.b[i].c`, o None si la raíz no es una variable."""
+    primary = place.primary()
+    return primary if isinstance(primary, P.IdentPContext) else None
 
 
 def moved_identifier(node):

@@ -1,0 +1,29 @@
+// Mover un campo de una variable propia vale; la variable queda movida entera.
+enum Tipo {
+    Par(i32, i32),
+    Nombre(String),
+}
+
+struct Nodo {
+    tipo: Tipo,
+    valor: i32,
+}
+
+fn describir(t: Tipo) -> i32 {
+    match t {
+        Tipo::Par(a, b) => a + b,
+        Tipo::Nombre(s) => {
+            print_str(s);
+            0
+        },
+    }
+}
+
+fn main() {
+    let n = Nodo { tipo: Tipo::Par(6, 7), valor: 3 };
+    print_i32(n.valor);
+    print_i32(describir(n.tipo));
+    let m = Nodo { tipo: Tipo::Nombre("hoja"), valor: 1 };
+    let t = m.tipo;
+    print_i32(describir(t));
+}

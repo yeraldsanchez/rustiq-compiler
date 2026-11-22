@@ -1,7 +1,8 @@
-// ERROR semantico E_MOVE_OUT_OF_PLACE 6:11
+// ERROR semantico E_USE_AFTER_MOVE 7:15
 fn tomar(s: String) {}
 
 fn main() {
     let a = ["uno", "dos"];
     tomar(a[0]);
+    print_str(a[1]);
 }
