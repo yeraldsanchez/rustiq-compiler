@@ -14,13 +14,15 @@ Reglas de los operadores:
 
 from antlr4.tree.Tree import TerminalNode
 
-from rustiq.errors import E_BAD_OPERAND, E_BORROW_CONFLICT, E_BORROW_MUT_IMMUTABLE, E_TYPE_MISMATCH
+from rustiq.errors import E_BAD_OPERAND, E_BORROW_CONFLICT, E_INT_OUT_OF_RANGE, E_BORROW_MUT_IMMUTABLE, E_TYPE_MISMATCH
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import BOOL, CHAR, F64, I32, STRING, RefT, Type, is_scalar
 
 NUMERIC = (I32, F64)
 EQUATABLE = (I32, F64, BOOL, CHAR)
 ORDERED = (I32, F64, CHAR)
+I32_MAX = 2**31 - 1
+I32_MIN_MAGNITUDE = 2**31  # solo vale como `-2147483648`
 
 
 def operators(ctx) -> list[str]:
@@ -28,17 +30,37 @@ def operators(ctx) -> list[str]:
     return [c.getText() for c in ctx.children if isinstance(c, TerminalNode)]
 
 
+def _is_negated(literal: P.LiteralContext) -> bool:
+    """True si el literal es el operando directo de un `-` unario: `-2147483648`."""
+    primary = literal.parentCtx
+    postfix = primary.parentCtx if isinstance(primary, P.LiteralPContext) else None
+    unary = postfix.parentCtx if isinstance(postfix, P.PostfixContext) else None
+    return (
+        isinstance(unary, P.UnaryContext)
+        and unary.MINUS() is not None
+        and postfix.getChildCount() == 1
+    )
+
+
 class ExprsMixin:
     def visitLiteral(self, ctx: P.LiteralContext):
         if ctx.STRING_LIT() is not None:
             return STRING
         if ctx.INT_LIT() is not None:
+            self._check_int_range(ctx)
             return I32
         if ctx.FLOAT_LIT() is not None:
             return F64
         if ctx.CHAR_LIT() is not None:
             return CHAR
         return BOOL
+
+    def _check_int_range(self, ctx: P.LiteralContext) -> None:
+        """Un literal entero tiene que caber en i32. 2147483648 solo vale negado."""
+        value = int(ctx.INT_LIT().getText())
+        limit = I32_MIN_MAGNITUDE if _is_negated(ctx) else I32_MAX
+        if value > limit:
+            self.error(ctx, E_INT_OUT_OF_RANGE, f"El literal {value} no cabe en i32 (de -2147483648 a 2147483647)")
 
     def visitUnary(self, ctx):
         inner = self.visit(ctx.postfix())

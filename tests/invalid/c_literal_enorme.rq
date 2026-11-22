@@ -1,0 +1,4 @@
+// ERROR semantico E_INT_OUT_OF_RANGE 3:15
+fn main() {
+    print_i32(99999999999);
+}
