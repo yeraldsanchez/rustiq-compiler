@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 from antlr4 import ParserRuleContext
 
-from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_RETURN_LOCAL_REF
+from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.moves import moved_identifier
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
@@ -76,9 +76,9 @@ class BorrowsMixin:
             b for i, b in enumerate(self._active_borrows) if i < mark or not b.temporary
         ]
 
-    def keep_borrows(self, mark: int) -> None:
-        """Los préstamos creados desde `mark` viven hasta el fin del ámbito actual."""
-        depth = len(self._scopes_list())
+    def keep_borrows(self, mark: int, depth: int | None = None) -> None:
+        """Los préstamos creados desde `mark` viven hasta el fin del ámbito `depth` (o el actual)."""
+        depth = len(self._scopes_list()) if depth is None else depth
         for b in self._active_borrows[mark:]:
             b.temporary = False
             b.depth = depth
@@ -138,6 +138,13 @@ class BorrowsMixin:
 
     # --- Reglas ----------------------------------------------------------------
 
+    def scope_depth(self, symbol) -> int:
+        """Cantidad de ámbitos abiertos hasta el que declaró `symbol` (incluido)."""
+        for i, scope in enumerate(self._scopes_list()):
+            if scope.get(symbol.name) is symbol:
+                return i + 1
+        return 0
+
     def visitAssignment(self, ctx):
         place = ctx.place()
         root_name = place.IDENT(0).getText()
@@ -148,7 +155,67 @@ class BorrowsMixin:
                 E_ASSIGN_WHILE_BORROWED,
                 f"No se puede asignar a '{root_name}' mientras está prestado",
             )
-        return super().visitAssignment(ctx)
+        mark = self.borrow_mark()
+        result = super().visitAssignment(ctx)
+        whole = place.getChildCount() == 1 and ctx.assignOp().getText() == "="
+        if target is not None and whole and isinstance(target.type, RefT):
+            self._check_ref_outlives(target, ctx.expression())
+            # `r = &x;`: el préstamo vive lo que vive `r`, no solo esta sentencia
+            self.keep_borrows(mark, self.scope_depth(target))
+        return result
+
+    def _check_ref_outlives(self, ref_symbol, expression) -> None:
+        """`r = &x` es error si `x` muere antes que `r` (se declaró en un bloque más interno)."""
+        ref_depth = self.scope_depth(ref_symbol)
+        for root in borrowed_roots(self, expression):
+            symbol = self.info.symbol.get(root)
+            if symbol is None or symbol.kind not in ("local", "param") or isinstance(symbol.type, RefT):
+                continue
+            if self.scope_depth(symbol) > ref_depth:
+                self.error(
+                    root, E_DANGLING_REF,
+                    f"'{symbol.name}' no vive lo suficiente: muere al cerrar su bloque y "
+                    f"'{ref_symbol.name}' lo seguiría usando",
+                )
+
+
+def borrowed_roots(analyzer, expression) -> list:
+    """Los `IdentP` prestados por la expresión: `&x`, `&x.campo`, o los de los argumentos
+    de una llamada que devuelve una referencia (`id(&x)`)."""
+    operand = borrowed_operand(expression)
+    if operand is not None:
+        primary = operand.primary()
+        return [primary] if isinstance(primary, P.IdentPContext) else []
+    call = _call_of(expression)
+    if call is None:
+        return []
+    callee, suffix = call
+    sig = analyzer.info.functions.get(callee.IDENT().getText())
+    if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
+        return []
+    return [root for arg in suffix.argumentList().expression() for root in borrowed_roots(analyzer, arg)]
+
+
+def _call_of(expression):
+    """(callee, sufijo) si la expresión es solo `nombre(args)`, si no None."""
+    node = expression
+    while True:
+        if isinstance(node, P.PostfixContext):
+            suffixes = node.children[1:]
+            primary = node.primary()
+            if len(suffixes) == 1 and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
+                return primary, suffixes[0]
+            if suffixes:
+                return None
+            node = primary
+        elif isinstance(node, P.ParenPContext):
+            node = node.expression()
+        elif isinstance(node, P.UnaryContext) and node.getChildCount() != 1:
+            return None
+        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
+            node = node.getChild(0)
+        else:
+            return None
 
 
 def borrowed_operand(expression):
