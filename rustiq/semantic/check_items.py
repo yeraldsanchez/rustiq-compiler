@@ -130,6 +130,8 @@ class ItemsMixin:
                     self.track_symbol(symbol)
         self.fn_ret, self.loop_depth = sig.ret, 0
         body_type = self.visit(ctx.block())
+        if ctx.block().expression() is not None:
+            self.check_returned_ref(ctx.block().expression())
         self.pop_scope()
         self._check_function_result(ctx, sig, body_type)
 

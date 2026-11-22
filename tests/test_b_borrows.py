@@ -5,6 +5,7 @@ from rustiq.errors import (
     E_BORROW_CONFLICT,
     E_BORROW_MUT_IMMUTABLE,
     E_MOVE_WHILE_BORROWED,
+    E_RETURN_LOCAL_REF,
 )
 from rustiq.pipeline import parse_source
 from rustiq.semantic.analyzer import Analyzer
@@ -63,3 +64,53 @@ def test_varios_compartidos():
 def test_mut_de_un_inmutable():
     src = "fn main() {\n    let x = 5;\n    let a = &mut x;\n}"
     assert error_codes(src) == [(E_BORROW_MUT_IMMUTABLE, 3, 13)]
+
+
+# --- E_RETURN_LOCAL_REF ----------------------------------------------------------
+
+REF = "struct Punto { x: i32, y: i32 }\n"
+
+
+def test_devolver_referencia_a_un_local():
+    src = "fn f() -> &i32 {\n    let x = 1;\n    &x\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 3, 5)]
+
+
+def test_devolver_con_return_y_parentesis():
+    src = "fn f() -> &i32 {\n    let x = 1;\n    return (&x);\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 3, 12)]
+
+
+def test_devolver_referencia_a_un_parametro_por_valor():
+    src = "fn f(n: i32) -> &i32 {\n    &n\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 2, 5)]
+
+
+def test_devolver_una_variable_que_apunta_a_un_local():
+    src = "fn f() -> &i32 {\n    let x = 1;\n    let r = &x;\n    r\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 4, 5)]
+
+
+def test_devolver_referencia_a_un_temporal():
+    src = "fn f() -> &i32 {\n    &5\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 2, 5)]
+
+
+def test_devolver_la_referencia_recibida():
+    src = "fn f(r: &i32) -> &i32 {\n    r\n}\nfn main() {}"
+    assert error_codes(src) == []
+
+
+def test_devolver_un_campo_de_la_referencia_recibida():
+    src = REF + "fn f(p: &Punto) -> &i32 {\n    &p.x\n}\nfn main() {}"
+    assert error_codes(src) == []
+
+
+def test_devolver_una_copia_de_la_referencia_recibida():
+    src = REF + "fn f(p: &Punto) -> &i32 {\n    let q = p;\n    return &q.y;\n}\nfn main() {}"
+    assert error_codes(src) == []
+
+
+def test_reasignar_la_referencia_a_un_local():
+    src = "fn f(r: &i32) -> &i32 {\n    let x = 1;\n    let mut s = r;\n    s = &x;\n    s\n}\nfn main() {}"
+    assert error_codes(src) == [(E_RETURN_LOCAL_REF, 5, 5)]

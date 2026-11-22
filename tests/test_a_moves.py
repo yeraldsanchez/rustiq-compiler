@@ -1,18 +1,10 @@
 """Movimientos: estados, uso después de mover, ramas y ciclos (G1, G8, T4)."""
 
-import pytest
-
 from rustiq.errors import E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.pipeline import compile_source
 from tests.support import error_codes
 
 PUNTO = "struct Punto { x: i32, y: i32 }\nfn usar(p: Punto) {}\nfn nada() {}\n"
-
-# TODO(B): estas pruebas usan el pipeline real y necesitan las llamadas a moves.py
-# desde el código de B (ver el TODO(B) de rustiq/semantic/moves.py). Hoy fallan.
-# Cuando pasen, `strict` las marca en rojo: hay que quitar la marca.
-espera_carril_b = pytest.mark.xfail(strict=True, reason="TODO(B): llamadas a moves.py desde el carril B")
-
 
 def errores_reales(source: str) -> list[tuple[str, int, int]]:
     return [(e.code, e.line, e.column) for e in compile_source(source).errors]
@@ -77,7 +69,6 @@ def test_uso_despues_de_pasar_a_una_funcion():
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 7, 10)]
 
 
-@espera_carril_b
 def test_reinicializar_despues_de_mover_es_valido():
     src = PUNTO + "fn main() {\n    let mut a = Punto { x: 1, y: 2 };\n    usar(a);\n    a = Punto { x: 3, y: 4 };\n    usar(a);\n}"
     assert errores_reales(src) == []
@@ -93,7 +84,6 @@ def test_reponer_dentro_de_la_rama_no_cuenta():
     assert errores_reales(src) == [(E_USE_AFTER_MOVE, 8, 10)]
 
 
-@espera_carril_b
 def test_cada_rama_empieza_con_el_estado_de_antes():
     src = PUNTO + "fn main() {\n    let c = true;\n    let a = Punto { x: 1, y: 2 };\n    if c { usar(a); } else { usar(a); }\n}"
     assert errores_reales(src) == []

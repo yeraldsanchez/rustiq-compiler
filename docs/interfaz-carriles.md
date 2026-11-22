@@ -67,14 +67,9 @@ lookup(name) -> Symbol | None
 
 A ya lleva el estado de cada variable (disponible, movida, sin inicializar), las ramas (G8) y los ciclos. `visitIdentP` (Analyzer) ya llama a `check_use`, y `visitLetDecl` a `consume` y `track_symbol`. Una variable cuyo tipo quedó en `None` por un error previo no se mueve ni se reporta como sin inicializar, para no generar errores en cascada.
 
-TODO(B): faltan estas llamadas desde el código de B:
+La asignación (`check_assign.py`) llama a `consume` y `mark_initialized`, y `visitArrayLiteral` (`check_arrays.py`) a `consume` por cada elemento.
 
-| Dónde (B) | Llamada |
-| --- | --- |
-| `visitAssignment` con `=` | `self.consume(ctx.expression())` y luego `self.mark_initialized(symbol)` |
-| `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
-
-`consume` ya consulta `is_borrowed(symbol)` (de `borrows.py`) y reporta `E_MOVE_WHILE_BORROWED`. Las pruebas que todavía dependen de B están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
+`consume` ya consulta `is_borrowed(symbol)` (de `borrows.py`) y reporta `E_MOVE_WHILE_BORROWED`.
 
 ### Préstamos (`semantic/borrows.py`)
 

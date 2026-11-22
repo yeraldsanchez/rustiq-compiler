@@ -82,6 +82,5 @@ class ControlGenMixin:
 
     def visitConstLocalDecl(self, ctx: RustiQParser.ConstLocalDeclContext):
         symbol = self.info.symbol.get(ctx)
-        name = self.declare_symbol(symbol)
-        self.visit(ctx.expression())
-        self.emit(f"local.set {name}")
+        self.declare_symbol(symbol)
+        self.store_symbol(symbol, lambda: self.visit(ctx.expression()))

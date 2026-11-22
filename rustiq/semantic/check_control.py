@@ -99,6 +99,7 @@ class ControlMixin:
             return
         actual = self.visit(ctx.expression())
         self.consume(ctx.expression())
+        self.check_returned_ref(ctx.expression())
         if expected == UNIT:
             self.error(ctx.expression(), E_BAD_RETURN, "La función no devuelve ningún valor")
         else:

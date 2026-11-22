@@ -1,0 +1,8 @@
+// ERROR semantico E_MOVE_WHILE_BORROWED 7:10
+struct Punto { x: i32, y: i32 }
+fn usar(p: Punto) {}
+fn main() {
+    let a = Punto { x: 1, y: 2 };
+    let r = &a;
+    usar(a);
+}

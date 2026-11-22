@@ -30,7 +30,7 @@ fn main() {
     let mayor: bool = 3.5 > 1.25;
     print_bool(mayor);
 
-    let r: i32 = match (suma_par(inv), mayor) {
+    let r: i32 = match (suma_par(intercambiar((3, 8))), mayor) {
         (11, true) => 1,
         (_, false) => 2,
         _ => 3,

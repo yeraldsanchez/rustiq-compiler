@@ -22,10 +22,12 @@ from rustiq.types import BOOL, CHAR, F64, I32
 
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 
-# True cuando B implementa los literales en ambos visitors (el visitor generado ya trae uno vacío).
-B_READY = (
-    Analyzer.visitLiteral is not RustiQVisitor.visitLiteral
-    and Emitter.visitLiteral is not RustiQVisitor.visitLiteral
+# True cuando B implementa literales y operadores en ambos visitors (el visitor
+# generado ya trae versiones vacías). Basta con mirar literales y sumas.
+B_READY = all(
+    getattr(visitor, rule) is not getattr(RustiQVisitor, rule)
+    for visitor in (Analyzer, Emitter)
+    for rule in ("visitLiteral", "visitAdditive")
 )
 necesita_carril_b = pytest.mark.skipif(not B_READY, reason="espera las expresiones del carril B")
 
