@@ -32,8 +32,19 @@ def _sin_wabt(monkeypatch):
 # --- compile_source ---------------------------------------------------------
 
 
+# TODO(B): falta el Analyzer y el codegen de arrays. `strict` avisa cuando ya pase.
+FALTAN_ARRAYS = pytest.mark.xfail(strict=True, reason="TODO(B): arrays")
+
+
+def _casos_validos() -> list:
+    return [
+        pytest.param(rq, id=rq.stem, marks=[FALTAN_ARRAYS] if rq.stem == "test_b3_arrays" else [])
+        for rq in sorted(VALID_DIR.glob("*.rq"))
+    ]
+
+
 @necesita_carril_b
-@pytest.mark.parametrize("rq", sorted(VALID_DIR.glob("*.rq")), ids=lambda p: p.stem)
+@pytest.mark.parametrize("rq", _casos_validos())
 def test_programa_valido_produce_wasm(rq):
     result = pipeline.compile_source(rq.read_text(encoding="utf-8"))
     assert result.ok, result.errors

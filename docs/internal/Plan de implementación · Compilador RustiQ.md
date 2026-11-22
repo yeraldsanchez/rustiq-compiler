@@ -267,7 +267,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 - [ ] Lunes 9: tabla de símbolos con ámbitos y `uid` por símbolo. La usan ambos
 - [ ] Ámbitos: uso sin declarar y declaración duplicada
-- [ ] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen. Aritmética i32 lista el martes 10
+- [x] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen (pasados a main por A desde la rama de B)
 - [ ] Inferencia de `let` sin tipo, y `let` sin inicializador con uso antes de asignar
 - [x] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut` (lo hizo A con permiso de B, en `check_assign.py`)
 - [ ] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen

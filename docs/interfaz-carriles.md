@@ -73,7 +73,7 @@ TODO(B): falta esta llamada desde el código de B (la asignación ya llama a `co
 | --- | --- |
 | `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
 
-`consume` ya consulta `is_borrowed(symbol)` (de `borrows.py`) y reporta `E_MOVE_WHILE_BORROWED`. Las pruebas que todavía dependen de B están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
+`consume` ya consulta `is_borrowed(symbol)` (de `borrows.py`) y reporta `E_MOVE_WHILE_BORROWED`.
 
 ### Préstamos (`semantic/borrows.py`)
 
