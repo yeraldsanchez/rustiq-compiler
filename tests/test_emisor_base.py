@@ -34,18 +34,18 @@ def test_wasm_type():
 
 def test_main_vacio_se_exporta_y_valida():
     wat = _wat("fn main() {}")
-    assert '(func $main (export "main")' in wat
+    assert '(func $f_main (export "main")' in wat
     assemble(wat)
 
 
 def test_firma_con_parametros_y_retorno():
     wat = _wat("fn f(a: i32, b: f64) -> bool { return true; }\nfn main() {}")
-    assert "(func $f (param $a_0 i32) (param $b_1 f64) (result i32)" in wat
+    assert "(func $f_f (param $a_0 i32) (param $b_1 f64) (result i32)" in wat
 
 
 def test_funcion_unit_no_tiene_result():
     wat = _wat("fn g(a: i32) {}\nfn main() {}")
-    assert "(func $g (param $a_0 i32)\n" in wat
+    assert "(func $f_g (param $a_0 i32)\n" in wat
 
 
 def test_varias_funciones_sin_main_en_el_nombre_no_se_exportan():

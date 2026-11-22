@@ -11,7 +11,7 @@ from pathlib import Path
 from rustiq.codegen.gen_arrays import ArraysGenMixin
 from rustiq.codegen.gen_control import ControlGenMixin
 from rustiq.codegen.gen_exprs import ExprsGenMixin
-from rustiq.codegen.gen_items import ItemsGenMixin
+from rustiq.codegen.gen_items import ItemsGenMixin, function_name
 from rustiq.codegen.gen_match import MatchGenMixin
 from rustiq.codegen.gen_refs import RefsGenMixin
 from rustiq.codegen.gen_structs import StructsGenMixin
@@ -208,7 +208,7 @@ class Emitter(
         self._depth = outer_depth
 
         params = self._param_names(ctx, sig)
-        header = f"(func ${name}"
+        header = f"(func {function_name(name)}"
         if name == "main":
             header += ' (export "main")'
         for pname, (_, ptype) in zip(params, sig.params):

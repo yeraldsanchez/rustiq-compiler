@@ -47,3 +47,5 @@ Implementación en `rustiq/codegen/runtime.wat`. El Emitter la pega dentro de ca
 - Exporta `memory` y `main`.
 - Importa desde `env`: `print_i32`, `print_f64`, `print_bool`, `print_char`, `print_str`.
 - El host se implementa dos veces con el mismo comportamiento: Python (`rustiq/host.py`) y navegador (`web/host.js`).
+
+Las funciones del usuario se emiten con el prefijo `$f_` (`fn suma` es `$f_suma`), así no chocan con las del runtime. Las del host conservan su nombre.
