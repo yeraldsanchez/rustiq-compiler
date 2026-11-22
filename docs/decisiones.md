@@ -28,7 +28,7 @@ Criterio del profesor (9 de noviembre de 2026): la gramática se sigue tal como 
 
 | # | Tema | Decisión asumida | Estado |
 | --- | --- | --- | --- |
-| P1 | Salida | Funciones builtin `print_i32`, `print_f64`, `print_bool`, `print_char`, `print_str` importadas del host | confirmado |
+| P1 | Salida | Funciones builtin `print_i32`, `print_f64`, `print_bool`, `print_char`, `print_str` importadas del host. Imprimir no mueve el valor: `print_str(s)` deja `s` disponible | confirmado |
 | P2 | `t.0` en tuplas | No existe. Las tuplas se leen con `match` | confirmado |
 | P3 | `*r = valor` | No existe. `&mut` sirve para structs y arrays | confirmado |
 | P4 | `if` como expresión | Solo sentencia | confirmado |

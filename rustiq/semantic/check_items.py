@@ -34,6 +34,7 @@ from rustiq.types import (
     Type,
 )
 
+HOST_NAMES = {name for name, _ in HOST_FUNCTIONS}
 PRIMITIVES = {"i32": I32, "f64": F64, "bool": BOOL, "char": CHAR}
 MAIN = "main"
 
@@ -166,7 +167,9 @@ class ItemsMixin:
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
         args = call.argumentList().expression() if call.argumentList() is not None else []
-        arg_types = self.visit_and_consume(args)  # se visitan siempre para ver sus errores
+        # Se visitan siempre para ver sus errores. Imprimir no mueve: `print_str(s)`
+        # deja `s` disponible, porque el host solo lee el String.
+        arg_types = self.visit_and_consume(args, moves=name not in HOST_NAMES)
         sig = self.info.functions.get(name)
         if sig is None:
             if self.lookup(name) is not None:

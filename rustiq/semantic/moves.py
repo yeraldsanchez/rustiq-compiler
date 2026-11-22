@@ -88,15 +88,18 @@ class MovesMixin:
         if self.moved_in_branches:
             self.moved_in_branches[-1].add(symbol.uid)
 
-    def visit_and_consume(self, expressions) -> list:
+    def visit_and_consume(self, expressions, moves: bool = True) -> list:
         """Visita cada expresión y la mueve enseguida, antes de la siguiente.
 
         Así `f(s, s)` o `(s, s)` reportan uso después de mover en el segundo `s`.
+        Con `moves=False` solo se visitan (los `print_*` del host no se quedan
+        con el valor).
         """
         types = []
         for expression in expressions:
             types.append(self.visit(expression))
-            self.consume(expression)
+            if moves:
+                self.consume(expression)
         return types
 
     # --- Ramas (G8) ------------------------------------------------------------
