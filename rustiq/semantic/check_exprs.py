@@ -2,13 +2,13 @@
 
 from rustiq.errors import E_BORROW_CONFLICT, E_BORROW_MUT_IMMUTABLE
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.types import BOOL, CHAR, F64, I32, RefT, String
+from rustiq.types import BOOL, CHAR, F64, I32, STRING, RefT
 
 
 class ExprsMixin:
     def visitLiteral(self, ctx: P.LiteralContext):
         if ctx.STRING_LIT() is not None:
-            return String
+            return STRING
         if ctx.INT_LIT() is not None:
             return I32
         if ctx.FLOAT_LIT() is not None:

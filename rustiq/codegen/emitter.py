@@ -118,7 +118,7 @@ class Emitter(
         for line in RUNTIME_WAT.splitlines():
             self.emit(line)
         self.visit(tree)
-        for offset, data in getattr(self, "_data_segments", []):
+        for offset, data in self._data_segments:
             escaped = "".join(f"\\{b:02x}" for b in data)
             self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self._depth -= 1

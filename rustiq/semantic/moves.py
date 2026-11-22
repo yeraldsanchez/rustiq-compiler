@@ -72,7 +72,7 @@ class MovesMixin:
         if self.move_state(symbol) != AVAILABLE:
             return  # check_use ya reportó el error
         # Si el símbolo está prestado, no se permite moverlo.
-        if hasattr(self, "is_borrowed") and self.is_borrowed(symbol):
+        if self.is_borrowed(symbol):
             self.error(
                 ident,
                 E_MOVE_WHILE_BORROWED,

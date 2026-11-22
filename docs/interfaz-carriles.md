@@ -74,7 +74,11 @@ TODO(B): faltan estas llamadas desde el código de B:
 | `visitAssignment` con `=` | `self.consume(ctx.expression())` y luego `self.mark_initialized(symbol)` |
 | `visitArrayLiteral` | `self.consume(elemento)` por cada elemento |
 
-Y A espera de B `is_borrowed(symbol)` para reportar `E_MOVE_WHILE_BORROWED`. La llamada está como TODO(B) en `consume`. Las pruebas que dependen de todo esto están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
+`consume` ya consulta `is_borrowed(symbol)` (de `borrows.py`) y reporta `E_MOVE_WHILE_BORROWED`. Las pruebas que todavía dependen de B están en `tests/test_a_moves.py` con la marca `espera_carril_b`.
+
+### Préstamos (`semantic/borrows.py`)
+
+Un `&x` o `&mut x` crea un préstamo temporal que muere al terminar la sentencia (o la condición de `if`/`while`) que lo creó: `visitBlock` y `_check_condition` lo sueltan con `borrow_mark` y `release_temporary_borrows`. Si un `let` guarda una referencia, `keep_borrows` lo deja vivo hasta que `pop_scope` cierra ese ámbito.
 
 ## Pruebas
 
