@@ -294,7 +294,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 - [ ] Strings: literales en el segmento de datos, `print_str`, move, paso y retorno. Sin concatenación ni comparación (P9)
 - [x] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen (celdas y codegen los hizo A con permiso de B)
 - [x] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
-- [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales. Falta solo `E_RETURN_LOCAL_REF`
+- [x] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
 - [ ] Resaltado de sintaxis RustiQ en el editor
 - [ ] Inválidos de sus características
 

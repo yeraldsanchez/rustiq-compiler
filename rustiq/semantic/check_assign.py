@@ -46,6 +46,8 @@ class AssignMixin:
             self.consume(ctx.expression())
             if whole:
                 self.mark_initialized(symbol)
+                if isinstance(symbol.type, RefT):
+                    self.track_ref_origin(symbol, ctx.expression())
         return None
 
     def _check_mutable(self, symbol, root, replaces_whole: bool) -> None:

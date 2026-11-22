@@ -9,11 +9,21 @@ Vida de un préstamo:
   (o la condición de un `if`/`while`) que lo creó.
 - Si un `let` guarda una referencia (`let r = &x;`), los préstamos creados por
   su inicializador quedan hasta que se cierra el ámbito donde vive `r`.
+
+Una función que devuelve `&T` no puede devolver una referencia a algo que
+muere con ella (`E_RETURN_LOCAL_REF`): una variable o parámetro por valor, un
+temporal (`&5`, `&f()`), o una variable-referencia que apunta a algo así.
+Seguir una referencia recibida (`&p.x` con `p: &Punto`) sí vale.
 """
 
 from dataclasses import dataclass
 
-from rustiq.errors import E_ASSIGN_WHILE_BORROWED
+from antlr4 import ParserRuleContext
+
+from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_RETURN_LOCAL_REF
+from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.moves import moved_identifier
+from rustiq.types import RefT
 
 
 @dataclass
@@ -27,6 +37,7 @@ class _BorrowEntry:
 class BorrowsMixin:
     def __init__(self) -> None:
         self._active_borrows: list[_BorrowEntry] = []
+        self._local_refs: set[int] = set()  # uids de referencias a algo local
 
     # --- Consultas -------------------------------------------------------------
 
@@ -77,6 +88,36 @@ class BorrowsMixin:
         depth = len(self._scopes_list())
         self._active_borrows = [b for b in self._active_borrows if b.depth < depth]
 
+    # --- Referencias a locales -----------------------------------------------------
+
+    def track_ref_origin(self, symbol, expression) -> None:
+        """Recuerda si la referencia guardada en `symbol` apunta a algo local."""
+        if self.points_to_local(expression):
+            self._local_refs.add(symbol.uid)
+        else:
+            self._local_refs.discard(symbol.uid)
+
+    def check_returned_ref(self, expression) -> None:
+        """Reporta si una función que devuelve `&T` devuelve una referencia a un local."""
+        if isinstance(self.fn_ret, RefT) and self.points_to_local(expression):
+            self.error(expression, E_RETURN_LOCAL_REF, "No se puede devolver una referencia a un valor local")
+
+    def points_to_local(self, expression) -> bool:
+        ident = moved_identifier(expression)
+        if ident is not None:  # `r`: depende de a qué apunta r
+            symbol = self.info.symbol.get(ident)
+            return symbol is not None and symbol.uid in self._local_refs
+        operand = borrowed_operand(expression)
+        if operand is None:
+            return False  # no es `&...`
+        primary = operand.primary()
+        symbol = self.info.symbol.get(primary) if isinstance(primary, P.IdentPContext) else None
+        if symbol is None:
+            return True  # `&5`, `&f()`: un temporal
+        if isinstance(symbol.type, RefT) and operand.getChildCount() > 1:
+            return symbol.uid in self._local_refs  # `&r.x`: se sigue la referencia r
+        return symbol.kind in ("local", "param")
+
     # --- Reglas ----------------------------------------------------------------
 
     def visitAssignment(self, ctx):
@@ -90,3 +131,17 @@ class BorrowsMixin:
                 f"No se puede asignar a '{root_name}' mientras está prestado",
             )
         return super().visitAssignment(ctx)
+
+
+def borrowed_operand(expression):
+    """El `postfix` de `&x...` si la expresión es solo eso (con o sin paréntesis), si no None."""
+    node = expression
+    while True:
+        if isinstance(node, P.UnaryContext) and node.AMP() is not None:
+            return node.postfix()
+        if isinstance(node, P.ParenPContext):
+            node = node.expression()
+        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
+            node = node.getChild(0)
+        else:
+            return None

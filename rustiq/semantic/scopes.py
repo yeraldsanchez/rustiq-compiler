@@ -97,6 +97,8 @@ class ScopesMixin:
         self.info.symbol.put(ctx, symbol)
         if isinstance(final_type, RefT):
             self.keep_borrows(mark)  # `let r = &x;`: el préstamo vive lo que vive `r`
+            if has_init:
+                self.track_ref_origin(symbol, ctx.expression())
         if has_init:
             self.consume(ctx.expression())
         # Con tipo None ya hubo un error: no se reporta además "sin inicializar"
