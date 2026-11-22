@@ -1,5 +1,6 @@
-/** Programas de ejemplo tomados de las pruebas del compilador. Vite los
- *  incrusta como texto al construir, así que no dependen del servidor. */
+/** Programas de ejemplo: los de web/examples/ y los de las pruebas del
+ *  compilador. Vite los incrusta como texto al construir, así que no
+ *  dependen del servidor. */
 
 export interface Example {
   name: string;
@@ -10,6 +11,12 @@ export interface ExampleGroup {
   label: string;
   examples: Example[];
 }
+
+const starters = import.meta.glob<string>("../examples/*.rq", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
 const valid = import.meta.glob<string>("../../tests/valid/*.rq", {
   query: "?raw",
@@ -37,6 +44,7 @@ function toExamples(files: Record<string, string>): Example[] {
 }
 
 export const EXAMPLE_GROUPS: ExampleGroup[] = [
+  { label: "Para empezar", examples: toExamples(starters) },
   { label: "Válidos", examples: toExamples(valid) },
   { label: "Con errores", examples: toExamples(invalid) },
 ];

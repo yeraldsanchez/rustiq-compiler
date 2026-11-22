@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RustiQ</title>
-  <script type="module" crossorigin src="./assets/index-CEGUT-zG.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CfGjTHSi.css">
+  <script type="module" crossorigin src="./assets/index-NGOb16vQ.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DcRQl2J_.css">
 </head>
 <body>
   <div class="app">
@@ -39,9 +39,13 @@
     <section class="tile editor" aria-label="Editor">
       <div class="tile-head">
         <span class="filename">main.rq</span>
-        <span class="tile-meta" id="cursor-pos">Ln 1, Col 1</span>
+        <div class="tile-tools">
+          <button class="toggle" id="btn-live" aria-pressed="false" title="Compilar al dejar de escribir y marcar los errores">Errores en vivo</button>
+          <span class="tile-meta" id="cursor-pos">Ln 1, Col 1</span>
+        </div>
       </div>
       <div class="editor-host" id="editor"></div>
+      <div class="splitter splitter-x" id="split-x" role="separator" aria-orientation="vertical" aria-label="Cambiar el ancho del editor" title="Arrastra para cambiar el ancho. Doble clic restablece."></div>
     </section>
 
     <section class="tile stat stat-state">
@@ -74,12 +78,14 @@
       <div class="console" id="pane-output" role="tabpanel" aria-live="polite">
         <p class="empty">Ejecuta el programa para ver su salida.</p>
       </div>
-      <div class="console" id="pane-wat" role="tabpanel" hidden>
-        <p class="empty">Compila el programa para ver su WAT.</p>
+      <div class="pane-code" id="pane-wat" role="tabpanel" hidden>
+        <p class="empty" id="wat-empty">Compila el programa para ver su WAT.</p>
+        <div class="code-host" id="wat-host" hidden></div>
       </div>
     </section>
 
     <section class="tile errors" aria-label="Errores">
+      <div class="splitter splitter-y" id="split-y" role="separator" aria-orientation="horizontal" aria-label="Cambiar el alto de los errores" title="Arrastra para cambiar el alto. Doble clic restablece."></div>
       <div class="tile-head">
         <h2 class="tile-title">Errores <span class="count" id="error-count"></span></h2>
       </div>

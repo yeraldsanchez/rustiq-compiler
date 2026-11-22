@@ -15,7 +15,7 @@ import { appendNote, clearOutput, printLine, selectTab, setModule, showOutputMes
 import { initSplitters } from "./ui/splitters";
 import { errorCountLabel, setCompileTime, setModuleSize, setState } from "./ui/status";
 
-const DEFAULT_EXAMPLE = "test_b4_strings.rq";
+const DEFAULT_EXAMPLE = "hola_mundo.rq";
 const SAVE_DELAY_MS = 300;
 
 const runner = new Runner();
@@ -41,8 +41,10 @@ const editor = createEditor(dom.editor, initialSource(), {
   onRun: () => void compileAndRun(),
 });
 
+const savedSource = load(KEYS.source);
+
 function initialSource(): string {
-  return load(KEYS.source) ?? findExample(DEFAULT_EXAMPLE)?.source ?? "fn main() {\n}\n";
+  return savedSource ?? findExample(DEFAULT_EXAMPLE)?.source ?? "fn main() {\n}\n";
 }
 
 function updateButtons(): void {
@@ -181,6 +183,8 @@ document.addEventListener("keydown", (event) => {
 });
 
 fillExamples();
+// Sin código guardado se cargó el ejemplo por defecto: el selector lo indica.
+if (savedSource === null) dom.examples.value = DEFAULT_EXAMPLE;
 renderErrors([], goToError);
 initSplitters();
 live = initLiveErrors(() => void compile({ quiet: true }));
