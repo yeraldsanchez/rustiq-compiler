@@ -1,0 +1,4 @@
+// Tu primer programa en RustiQ: imprime un saludo.
+fn main() {
+    print_str("Hola, mundo");
+}

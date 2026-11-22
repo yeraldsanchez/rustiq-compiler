@@ -31,6 +31,10 @@ class NodeProperty(Generic[T]):
     def __contains__(self, node: Any) -> bool:
         return node in self._values
 
+    def items(self) -> list[tuple[Any, T]]:
+        """Pares (nodo, valor) en el orden en que se anotaron."""
+        return list(self._values.items())
+
 
 @dataclass
 class Symbol:

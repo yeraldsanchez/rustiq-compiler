@@ -60,3 +60,10 @@ def test_cors_permite_otro_origen(client):
 
 def test_sirve_la_carpeta_web(client):
     assert client.get("/hola.html").status_code == 200
+
+
+def test_devuelve_simbolos(client):
+    resp = client.post("/compile", json={"source": "fn main() {\n    let x = 1;\n    print_i32(x);\n}\n"})
+    simbolos = resp.json()["symbols"]
+    assert {"name": "x", "kind": "local", "type": "i32"}.items() <= simbolos[1].items()
+    assert simbolos[1]["line"] == 2 and simbolos[1]["column"] == 9

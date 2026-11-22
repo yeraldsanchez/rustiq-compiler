@@ -110,7 +110,20 @@ python -m pytest
 uvicorn server.app:app --reload
 ```
 
-La API queda en `POST http://localhost:8000/compile` y la carpeta `web/` se sirve en `http://localhost:8000/`. La documentación interactiva está en `/docs`.
+La API queda en `POST http://localhost:8000/compile` y el editor en `http://localhost:8000/`. La documentación interactiva está en `/docs`.
+
+### Trabajar en el editor
+
+El editor está en `web/`, escrito en TypeScript con Vite y CodeMirror 6. Lo que sirve FastAPI es `web/dist/`, que ya viene construido en el repo: para usar el editor no hace falta Node. Solo se necesita Node 20 o superior para modificarlo:
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:5173, reenvía /compile a uvicorn en el puerto 8000
+npm run build      # revisa los tipos y regenera web/dist/
+```
+
+Después de cambiar algo en `web/src/`, `web/index.html` o `web/styles.css` hay que correr `npm run build` y subir `web/dist/` en el mismo commit.
 
 ### Regenerar la gramática
 
