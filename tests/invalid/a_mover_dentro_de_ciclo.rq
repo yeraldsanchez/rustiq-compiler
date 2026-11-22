@@ -1,0 +1,10 @@
+// ERROR semantico E_USE_AFTER_MOVE 6:14
+struct Punto { x: i32, y: i32 }
+fn usar(p: Punto) {}
+fn f(p: Punto) {
+    loop {
+        usar(p);
+        break;
+    }
+}
+fn main() {}

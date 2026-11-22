@@ -1,0 +1,7 @@
+// ERROR semantico E_UNINITIALIZED 6:10
+struct Punto { x: i32, y: i32 }
+fn usar(p: Punto) {}
+fn main() {
+    let a: Punto;
+    usar(a);
+}
