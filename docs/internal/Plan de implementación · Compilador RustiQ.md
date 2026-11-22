@@ -269,7 +269,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 - [ ] Ámbitos: uso sin declarar y declaración duplicada
 - [ ] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen. Aritmética i32 lista el martes 10
 - [ ] Inferencia de `let` sin tipo, y `let` sin inicializador con uso antes de asignar
-- [ ] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut`
+- [x] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut` (lo hizo A con permiso de B, en `check_assign.py`)
 - [ ] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen
 - [ ] Inválidos de sus características
 
@@ -283,8 +283,8 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 
 - [x] Enums: declaración, `Enum::Variante`, tag y payload. Tipos y codegen
 - [x] Match: tipos de patrones, mismo tipo en todos los brazos, exhaustividad. Codegen sobre enums, literales, `_`, identificadores y tuplas
-- [ ] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`. Hecho del lado de A; falta que `visitAssignment` (B) llame a `consume` y `mark_initialized` (TODO(B) de `interfaz-carriles.md`)
-- [ ] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops. Hecho del lado de A; falta que `visitAssignment` (B) llame a `consume` y `mark_initialized` (TODO(B) de `interfaz-carriles.md`)
+- [x] Movimientos: estados disponible, movida y sin inicializar. Move al asignar, pasar y retornar usando `is_copy`
+- [x] Uso después de movimiento, reinicialización válida, y movimientos dentro de `if` y loops
 - [x] No mover un valor con préstamo activo, consultando `borrows`
 - [x] ~~Copia de arrays y tuplas Copy con `memcpy`~~ Ya no hace falta: arrays y tuplas se mueven (G1)
 - [x] Inválidos de sus características
