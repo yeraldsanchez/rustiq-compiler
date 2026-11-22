@@ -20,7 +20,9 @@ class ControlMixin:
     def visitBlock(self, ctx: RustiQParser.BlockContext):
         self.push_scope()
         for statement in ctx.statement():
+            mark = self.borrow_mark()
             self.visit(statement)
+            self.release_temporary_borrows(mark)
         tail = self.visit(ctx.expression()) if ctx.expression() is not None else UNIT
         if ctx.expression() is not None:
             self.consume(ctx.expression())
@@ -33,8 +35,6 @@ class ControlMixin:
         actual = self.visit(ctx.expression())
         if actual is not None:
             self.info.expr_type.put(ctx.expression(), actual)  # el codegen descarta el valor
-        if hasattr(self, "clear_temporary_borrows"):
-            self.clear_temporary_borrows()
 
     def visitBlockS(self, ctx: RustiQParser.BlockSContext):
         self._check_statement_block(ctx.block(), "Un bloque usado como sentencia")
@@ -67,7 +67,9 @@ class ControlMixin:
         self.loop_depth -= 1
 
     def _check_condition(self, condition: RustiQParser.ConditionContext) -> None:
+        mark = self.borrow_mark()  # los préstamos de la condición no llegan al cuerpo
         self.mismatch(condition, E_TYPE_MISMATCH, BOOL, self.visit(condition), "La condición")
+        self.release_temporary_borrows(mark)
 
     def _check_statement_block(self, block: RustiQParser.BlockContext, what: str) -> None:
         actual = self.visit(block)
