@@ -27,7 +27,7 @@ Cada `a[i]` revisa `i` con `i32.ge_u` contra el tamaño (un negativo también qu
 
 ## Heap
 
-- Bump allocator que empieza en la dirección 1024. Las direcciones menores se reservan para datos estáticos (literales de String).
+- Bump allocator. Los literales de String van desde la dirección 0 y el heap empieza en 1024, o justo después de los literales (alineado a 8) si ocupan más. Si hace falta, la memoria inicial tiene más de una página.
 - Un global mutable `$heap` que solo avanza.
 - Si el heap se agota, se llama a `memory.grow`.
 - No se libera memoria. Un loop que cree muchos `String` consume heap sin recuperarlo.
@@ -47,7 +47,3 @@ Implementación en `rustiq/codegen/runtime.wat`. El Emitter la pega dentro de ca
 - Exporta `memory` y `main`.
 - Importa desde `env`: `print_i32`, `print_f64`, `print_bool`, `print_char`, `print_str`.
 - El host se implementa dos veces con el mismo comportamiento: Python (`rustiq/host.py`) y navegador (`web/host.js`).
-
-## Pendiente
-
-- Si los literales de String superan los 1024 bytes, el inicio del heap tiene que moverse.

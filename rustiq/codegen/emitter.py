@@ -24,6 +24,11 @@ from rustiq.types import I32, UNIT, Type
 
 INDENT = "  "
 CELL_SIZE = 8  # una celda guarda un escalar (i32 o f64)
+PAGE_SIZE = 65536
+HEAP_ALIGN = 8
+# Línea del runtime que fija el inicio del heap; se reescribe si los literales no caben.
+HEAP_GLOBAL = "(global $heap (mut i32) (i32.const 1024))"
+DEFAULT_HEAP_START = 1024
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
@@ -143,16 +148,33 @@ class Emitter(
         self._depth += 1
         for name, param_type in HOST_FUNCTIONS:
             self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
+        memory_line = len(self._lines)
         self.emit('(memory (export "memory") 1)')
+        heap_line = None
         for line in RUNTIME_WAT.splitlines():
+            if line.strip() == HEAP_GLOBAL:
+                heap_line = len(self._lines)
             self.emit(line)
         self.visit(tree)
+        self._place_heap(memory_line, heap_line)
         for offset, data in self._data_segments:
             escaped = "".join(f"\\{b:02x}" for b in data)
             self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self._depth -= 1
         self.emit(")")
         return "\n".join(self._lines) + "\n"
+
+    def _place_heap(self, memory_line: int, heap_line: int | None) -> None:
+        """El heap empieza después de los literales: en 1024 o más allá si no caben."""
+        aligned = -(-self._data_offset // HEAP_ALIGN) * HEAP_ALIGN
+        heap_start = max(DEFAULT_HEAP_START, aligned)
+        if heap_start == DEFAULT_HEAP_START:
+            return
+        assert heap_line is not None, "runtime.wat sin la global $heap"
+        pages = -(-heap_start // PAGE_SIZE)
+        indent = INDENT * self._depth
+        self._lines[memory_line] = f'{indent}(memory (export "memory") {pages})'
+        self._lines[heap_line] = f"{indent}(global $heap (mut i32) (i32.const {heap_start}))"
 
     def visitProgram(self, ctx: RustiQParser.ProgramContext):
         for item in ctx.item():

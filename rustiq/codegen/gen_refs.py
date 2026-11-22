@@ -10,8 +10,8 @@ from rustiq.generated.RustiQParser import RustiQParser
 # Secuencias de escape de un literal (fragmento ESC de la gramática).
 ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
 
-# Los literales viven en [0, STATIC_LIMIT); ahí empieza el heap (runtime.wat).
-STATIC_LIMIT = 1024
+# Los literales viven desde la dirección 0. El heap empieza después de ellos
+# (en 1024 o más allá si no caben; ver Emitter._place_heap).
 
 
 def unescape(raw_literal: str) -> str:
@@ -31,8 +31,6 @@ class RefsGenMixin:
     def emit_string_literal(self, raw_literal: str) -> None:
         data = unescape(raw_literal).encode("utf-8")
         offset = self._data_offset
-        if offset + len(data) > STATIC_LIMIT:
-            raise ValueError(f"Los literales de String superan {STATIC_LIMIT} bytes")
         self._data_offset = offset + len(data)
         self._data_segments.append((offset, data))
 
