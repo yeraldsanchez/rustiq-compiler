@@ -13,10 +13,10 @@ Reglas:
 - `x = v` mueve `v` y deja `x` disponible otra vez (reinicialización).
 """
 
-from rustiq.errors import E_ASSIGN_IMMUTABLE, E_BAD_INDEX, E_BAD_OPERAND, E_TYPE_MISMATCH, E_UNDECLARED, E_UNKNOWN_FIELD
+from rustiq.errors import E_ASSIGN_IMMUTABLE, E_BAD_OPERAND, E_TYPE_MISMATCH, E_UNDECLARED, E_UNKNOWN_FIELD
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.moves import UNINITIALIZED
-from rustiq.types import F64, I32, ArrayT, RefT, StructT, Type
+from rustiq.types import F64, I32, RefT, StructT, Type
 
 ASSIGNABLE_KINDS = ("local", "param")
 NUMERIC = (I32, F64)
@@ -69,7 +69,7 @@ class AssignMixin:
                 current = self._field_type(current, children[i + 1])
                 i += 2
             else:  # [ expresión ]
-                current = self._index_type(current, children[i + 1])
+                current = self.index_type(current, children[i + 1])
                 i += 3
         return current
 
@@ -84,15 +84,6 @@ class AssignMixin:
             self.error(ident, E_UNKNOWN_FIELD, f"'{base.name}' no tiene el campo '{name}'")
             return None
         return fields[name]
-
-    def _index_type(self, operand: Type, index) -> Type | None:
-        base = operand.target if isinstance(operand, RefT) else operand
-        index_type = self.visit(index)
-        self.mismatch(index, E_TYPE_MISMATCH, I32, index_type, "El índice")
-        if not isinstance(base, ArrayT):
-            self.error(index, E_BAD_INDEX, f"El tipo {operand} no se puede indexar")
-            return None
-        return base.elem
 
     def _check_value(self, ctx, op: str, target: Type, value: Type | None) -> None:
         if op != "=" and target not in NUMERIC:
