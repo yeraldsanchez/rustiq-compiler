@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RustiQ</title>
+  <script type="module" crossorigin src="./assets/index-B5M9OQvP.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DcRQl2J_.css">
+</head>
+<body>
+  <div class="app">
+
+    <header class="tile topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">RustiQ</span>
+        <span class="brand-tag">Rust a WebAssembly</span>
+      </div>
+
+      <div class="actions">
+        <label class="field">
+          <span class="field-label">Ejemplo</span>
+          <select class="select" id="examples">
+            <option value="" selected disabled hidden>Elegir…</option>
+          </select>
+        </label>
+        <span class="divider" aria-hidden="true"></span>
+        <button class="btn" id="btn-compile" title="Compilar (Ctrl+B)">Compilar</button>
+        <button class="btn btn-primary" id="btn-run" title="Compilar y ejecutar (Ctrl+Enter)">Ejecutar</button>
+        <button class="btn btn-ghost" id="btn-stop" disabled title="Detener la ejecución">Detener</button>
+      </div>
+    </header>
+
+    <div class="tile banner" id="banner" role="alert" hidden>
+      <p><strong>Sin conexión con el compilador.</strong> <span id="banner-text"></span></p>
+      <button class="btn btn-sm" id="btn-retry">Reintentar</button>
+    </div>
+
+    <section class="tile editor" aria-label="Editor">
+      <div class="tile-head">
+        <span class="filename">main.rq</span>
+        <div class="tile-tools">
+          <button class="toggle" id="btn-live" aria-pressed="false" title="Compilar al dejar de escribir y marcar los errores">Errores en vivo</button>
+          <span class="tile-meta" id="cursor-pos">Ln 1, Col 1</span>
+        </div>
+      </div>
+      <div class="editor-host" id="editor"></div>
+      <div class="splitter splitter-x" id="split-x" role="separator" aria-orientation="vertical" aria-label="Cambiar el ancho del editor" title="Arrastra para cambiar el ancho. Doble clic restablece."></div>
+    </section>
+
+    <section class="tile stat stat-state">
+      <span class="stat-label">Estado</span>
+      <span class="stat-value is-empty" id="stat-state">Listo</span>
+    </section>
+
+    <section class="tile stat stat-time">
+      <span class="stat-label">Compilación</span>
+      <span class="stat-value is-empty" id="stat-time">—</span>
+    </section>
+
+    <section class="tile stat stat-size">
+      <span class="stat-label">Módulo</span>
+      <span class="stat-value is-empty" id="stat-size">—</span>
+    </section>
+
+    <section class="tile output" aria-label="Salida">
+      <div class="tile-head">
+        <nav class="tabs" role="tablist">
+          <button class="tab is-active" id="tab-output" role="tab" aria-selected="true">Salida</button>
+          <button class="tab" id="tab-wat" role="tab" aria-selected="false">WAT</button>
+        </nav>
+        <div class="tile-tools">
+          <button class="btn btn-sm" id="btn-copy" disabled>Copiar</button>
+          <button class="btn btn-sm" id="btn-dl-wat" disabled title="Descargar main.wat">.wat</button>
+          <button class="btn btn-sm" id="btn-dl-wasm" disabled title="Descargar main.wasm">.wasm</button>
+        </div>
+      </div>
+      <div class="console" id="pane-output" role="tabpanel" aria-live="polite">
+        <p class="empty">Ejecuta el programa para ver su salida.</p>
+      </div>
+      <div class="pane-code" id="pane-wat" role="tabpanel" hidden>
+        <p class="empty" id="wat-empty">Compila el programa para ver su WAT.</p>
+        <div class="code-host" id="wat-host" hidden></div>
+      </div>
+    </section>
+
+    <section class="tile errors" aria-label="Errores">
+      <div class="splitter splitter-y" id="split-y" role="separator" aria-orientation="horizontal" aria-label="Cambiar el alto de los errores" title="Arrastra para cambiar el alto. Doble clic restablece."></div>
+      <div class="tile-head">
+        <h2 class="tile-title">Errores <span class="count" id="error-count"></span></h2>
+      </div>
+      <ul class="error-list" id="error-list"></ul>
+      <p class="empty errors-empty" id="errors-empty">Sin errores.</p>
+    </section>
+
+  </div>
+</body>
+</html>

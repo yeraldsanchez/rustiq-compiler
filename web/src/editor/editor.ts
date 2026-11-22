@@ -1,0 +1,138 @@
+/** Editor de código: CodeMirror 6 con resaltado de Rust y los errores del
+ *  compilador marcados en el texto. */
+
+import { acceptCompletion } from "@codemirror/autocomplete";
+import { indentLess, indentMore } from "@codemirror/commands";
+import { rust } from "@codemirror/lang-rust";
+import { indentUnit } from "@codemirror/language";
+import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import { EditorSelection, Prec, type Text } from "@codemirror/state";
+import { EditorView, keymap, type Command } from "@codemirror/view";
+import { basicSetup } from "codemirror";
+
+import { PHASE_LABEL, type CompileError, type SymbolHint } from "../types";
+import { rustiqCompletion } from "./completion";
+import { setSymbols, symbolHoverExtension, toRanges } from "./hover";
+import { editorChrome, rustHighlighting } from "./theme";
+
+// Sangría de 4 espacios, como en Rust.
+const INDENT = "    ";
+
+export interface EditorCallbacks {
+  onChange(source: string): void;
+  onCursor(line: number, column: number): void;
+  onCompile(): void;
+  onRun(): void;
+}
+
+export interface Editor {
+  getSource(): string;
+  setSource(source: string): void;
+  showErrors(errors: CompileError[]): void;
+  /** Pistas para el tipo al pasar el mouse, de la última compilación. */
+  showSymbols(symbols: SymbolHint[]): void;
+  goTo(line: number, column: number): void;
+}
+
+export function createEditor(parent: HTMLElement, initial: string, callbacks: EditorCallbacks): Editor {
+  const shortcuts = Prec.highest(
+    keymap.of([
+      { key: "Mod-Enter", run: () => (callbacks.onRun(), true) },
+      { key: "Mod-b", run: () => (callbacks.onCompile(), true) },
+      // El código se guarda solo; esto evita el diálogo de guardar del navegador.
+      { key: "Mod-s", run: () => true },
+      // Tab acepta la sugerencia abierta; si no hay, inserta sangría en vez de
+      // mover el foco. Para salir del editor con el teclado: Esc y luego Tab.
+      { key: "Tab", run: acceptCompletion },
+      { key: "Tab", run: insertTab, shift: indentLess },
+    ]),
+  );
+
+  const view = new EditorView({
+    parent,
+    doc: initial,
+    extensions: [
+      basicSetup,
+      rust(),
+      indentUnit.of(INDENT),
+      lintGutter(),
+      rustiqCompletion,
+      symbolHoverExtension,
+      editorChrome,
+      rustHighlighting,
+      shortcuts,
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) callbacks.onChange(update.state.doc.toString());
+        if (update.docChanged || update.selectionSet) {
+          const head = update.state.selection.main.head;
+          const line = update.state.doc.lineAt(head);
+          callbacks.onCursor(line.number, head - line.from + 1);
+        }
+      }),
+    ],
+  });
+
+  return {
+    getSource: () => view.state.doc.toString(),
+
+    setSource(source) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: source },
+        selection: EditorSelection.cursor(0),
+        scrollIntoView: true,
+      });
+    },
+
+    showErrors(errors) {
+      const diagnostics = errors.map((e) => toDiagnostic(view.state.doc, e));
+      view.dispatch(setDiagnostics(view.state, diagnostics));
+    },
+
+    showSymbols(symbols) {
+      view.dispatch({ effects: setSymbols.of(toRanges(view.state.doc, symbols)) });
+    },
+
+    goTo(line, column) {
+      const pos = toOffset(view.state.doc, line, column);
+      view.dispatch({ selection: EditorSelection.cursor(pos), scrollIntoView: true });
+      view.focus();
+    },
+  };
+}
+
+/** Sin selección, inserta espacios en el cursor hasta la siguiente columna
+ *  múltiplo de la sangría (no mueve el texto que está antes del cursor).
+ *  Con texto seleccionado, indenta las líneas completas. */
+const insertTab: Command = (view) => {
+  const { state } = view;
+  if (state.selection.ranges.some((range) => !range.empty)) return indentMore(view);
+  const transaction = state.changeByRange((range) => {
+    const column = range.head - state.doc.lineAt(range.head).from;
+    const spaces = INDENT.length - (column % INDENT.length);
+    return {
+      changes: { from: range.head, insert: " ".repeat(spaces) },
+      range: EditorSelection.cursor(range.head + spaces),
+    };
+  });
+  view.dispatch(state.update(transaction, { scrollIntoView: true, userEvent: "input" }));
+  return true;
+};
+
+/** Pasa línea y columna del compilador (desde 1) a un desplazamiento en el
+ *  documento. Se acota por si el texto cambió desde que se compiló. */
+function toOffset(doc: Text, line: number, column: number): number {
+  const lineInfo = doc.line(Math.min(Math.max(line, 1), doc.lines));
+  return Math.min(lineInfo.from + Math.max(column - 1, 0), lineInfo.to);
+}
+
+function toDiagnostic(doc: Text, error: CompileError): Diagnostic {
+  const from = toOffset(doc, error.line, error.column);
+  const lineEnd = doc.lineAt(from).to;
+  return {
+    from,
+    to: Math.min(from + Math.max(error.length, 1), lineEnd),
+    severity: "error",
+    message: error.message,
+    source: `${PHASE_LABEL[error.phase]} · ${error.code}`,
+  };
+}
