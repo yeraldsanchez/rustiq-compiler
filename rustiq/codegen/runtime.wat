@@ -1,8 +1,3 @@
-;; Runtime de RustiQ. Dueño: A (Yerald).
-;;
-;; No es un módulo completo: el Emitter pega estas definiciones dentro de cada
-;; módulo generado, después de los imports y de `(memory ...)`.
-;; Representación en memoria: docs/memoria.md (contrato 5).
 ;;
 ;; Mapa de la memoria lineal:
 ;;   [0, 1024)   datos estáticos: los literales de String (segmentos `data`)
