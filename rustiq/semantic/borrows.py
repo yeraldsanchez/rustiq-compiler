@@ -23,7 +23,7 @@ from antlr4 import ParserRuleContext
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.moves import moved_identifier
-from rustiq.types import RefT
+from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
 
 @dataclass
@@ -87,6 +87,24 @@ class BorrowsMixin:
         """Al cerrar un ámbito, suelta los préstamos que vivían en él."""
         depth = len(self._scopes_list())
         self._active_borrows = [b for b in self._active_borrows if b.depth < depth]
+
+    def may_hold_ref(self, t, seen=None) -> bool:
+        """True si un valor de tipo `t` puede guardar una referencia."""
+        seen = set() if seen is None else seen
+        if isinstance(t, RefT):
+            return True
+        if isinstance(t, ArrayT):
+            return self.may_hold_ref(t.elem, seen)
+        if isinstance(t, TupleT):
+            return any(self.may_hold_ref(e, seen) for e in t.elems)
+        if isinstance(t, (StructT, EnumT)) and t.name not in seen:
+            seen.add(t.name)
+            if isinstance(t, StructT):
+                fields = self.info.structs[t.name].fields.values()
+            else:
+                fields = [p for payload in self.info.enums[t.name].variants.values() for p in payload]
+            return any(self.may_hold_ref(f, seen) for f in fields)
+        return False
 
     # --- Referencias a locales -----------------------------------------------------
 

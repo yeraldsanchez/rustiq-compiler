@@ -1,0 +1,26 @@
+// El &mut de un argumento termina cuando la llamada vuelve.
+fn tick(c: &mut i32) -> i32 {
+    *c + 1
+}
+
+struct Contador {
+    n: i32,
+}
+
+fn sumar(c: &mut Contador) -> i32 {
+    c.n = c.n + 1;
+    c.n
+}
+
+fn mostrar(a: i32, b: i32) {
+    print_i32(a);
+    print_i32(b);
+}
+
+fn main() {
+    let mut c = 5;
+    print_i32(tick(&mut c) + tick(&mut c));
+    let mut k = Contador { n: 0 };
+    mostrar(sumar(&mut k), sumar(&mut k));
+    print_i32(k.n);
+}

@@ -167,10 +167,15 @@ class ItemsMixin:
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
         args = call.argumentList().expression() if call.argumentList() is not None else []
+        mark = self.borrow_mark()
         # Se visitan siempre para ver sus errores. Imprimir no mueve: `print_str(s)`
         # deja `s` disponible, porque el host solo lee el String.
         arg_types = self.visit_and_consume(args, moves=name not in HOST_NAMES)
         sig = self.info.functions.get(name)
+        if sig is not None and not self.may_hold_ref(sig.ret):
+            # Los `&`/`&mut` de los argumentos terminan al volver: el resultado no
+            # puede llevárselos. Así `f(&mut c) + f(&mut c)` es válido.
+            self.release_temporary_borrows(mark)
         if sig is None:
             if self.lookup(name) is not None:
                 self.error(callee, E_NOT_CALLABLE, f"'{name}' no es una función")
