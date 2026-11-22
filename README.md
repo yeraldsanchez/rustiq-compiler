@@ -42,6 +42,19 @@ Hecho con Python, ANTLR4, FastAPI y CodeMirror.
 
 ## 🚀 Empezar
 
+### Con Docker (lo más rápido)
+
+Solo hace falta [Docker](https://docs.docker.com/get-docker/). La imagen trae Python, wabt y el editor ya construido:
+
+```bash
+docker build -t rustiq .
+docker run --rm -p 8000:8000 rustiq
+```
+
+O con Compose: `docker compose up --build`.
+
+El editor queda en `http://localhost:8000/` y la API en `POST http://localhost:8000/compile`. Para correr las pruebas dentro de la imagen: `docker run --rm rustiq python -m pytest`.
+
 ### Requisitos del sistema
 
 Estas herramientas no se instalan con pip:
