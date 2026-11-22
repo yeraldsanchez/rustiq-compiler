@@ -1,0 +1,25 @@
+// Leer campos Copy, prestar campos e imprimir partes sí se puede.
+struct Punto {
+    x: i32,
+    y: i32,
+}
+
+struct Figura {
+    nombre: String,
+    centro: Punto,
+}
+
+fn suma(p: &Punto) -> i32 {
+    p.x + p.y
+}
+
+fn main() {
+    let f = Figura { nombre: "cuadro", centro: Punto { x: 3, y: 4 } };
+    let x = f.centro.x;
+    print_i32(x);
+    print_i32(suma(&f.centro));
+    print_str(f.nombre);
+    let a = [10, 20, 30];
+    let b = a[1];
+    print_i32(b);
+}

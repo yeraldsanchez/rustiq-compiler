@@ -1,0 +1,5 @@
+fn main() {
+    let numeros: [i32; 3] = [10, 20, 30];
+    let suma: i32 = numeros[0] + numeros[1] + numeros[2];
+    print_i32(suma);
+}

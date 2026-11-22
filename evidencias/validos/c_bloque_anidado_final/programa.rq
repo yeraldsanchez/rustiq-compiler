@@ -1,0 +1,18 @@
+// Un bloque anidado puede ser el valor final de otro bloque.
+fn calcular(x: i32) -> i32 {
+    let y = 1;
+    {
+        let x = x * 10;
+        x + y
+    }
+}
+
+fn main() {
+    let w = {
+        {
+            3
+        }
+    };
+    print_i32(w);
+    print_i32(calcular(2));
+}

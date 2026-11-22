@@ -1,0 +1,39 @@
+// Brazos de match que terminan en return.
+fn clasificar(n: i32) -> i32 {
+    match n {
+        0 => {
+            return 100;
+        },
+        _ => {
+            return 200;
+        },
+    };
+}
+
+fn como_valor_final(n: i32) -> i32 {
+    match n {
+        1 => {
+            return 5;
+        },
+        _ => n * 10,
+    }
+}
+
+fn en_let(n: i32) -> i32 {
+    let v = match n {
+        0 => {
+            return -1;
+        },
+        k => k + 1,
+    };
+    v * 2
+}
+
+fn main() {
+    print_i32(clasificar(0));
+    print_i32(clasificar(3));
+    print_i32(como_valor_final(1));
+    print_i32(como_valor_final(4));
+    print_i32(en_let(0));
+    print_i32(en_let(4));
+}

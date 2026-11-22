@@ -1,0 +1,35 @@
+// Structs: declaración, literal, acceso a campos, &mut y movimiento.
+struct Punto {
+    x: i32,
+    y: i32,
+}
+
+struct Rect {
+    origen: Punto,
+    ancho: i32,
+    alto: i32,
+}
+
+fn suma(p: Punto) -> i32 {
+    p.x + p.y
+}
+
+fn area(r: Rect) -> i32 {
+    r.ancho * r.alto
+}
+
+fn mover(p: &mut Punto, dx: i32) {
+    p.x = p.x + dx;
+}
+
+fn main() {
+    let mut p = Punto { x: 3, y: 4 };
+    mover(&mut p, 10);
+    print_i32(p.x);
+
+    let r = Rect { origen: p, ancho: 5, alto: 6 };
+    print_i32(area(r));
+
+    let q = Punto { x: 1, y: 2 };
+    print_i32(suma(q));
+}

@@ -1,0 +1,7 @@
+// Los extremos de i32 se aceptan; 2147483648 solo bajo un '-'.
+const MINIMO: i32 = -2147483648;
+fn main() {
+    print_i32(MINIMO);
+    print_i32(2147483647);
+    print_i32(-2147483647 - 1);
+}

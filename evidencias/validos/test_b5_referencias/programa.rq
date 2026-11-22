@@ -1,0 +1,13 @@
+struct Contres {
+    valor: i32,
+}
+
+fn actualizar(c: &mut Contres) {
+    c.valor = c.valor + 1;
+}
+
+fn main() {
+    let mut cont: Contres = Contres { valor: 0 };
+    actualizar(&mut cont);
+    print_i32(cont.valor);
+}
