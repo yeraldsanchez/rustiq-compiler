@@ -24,7 +24,7 @@ from antlr4 import ParserRuleContext
 
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.flow import bare_primary as _bare_primary
+from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
 from rustiq.semantic.moves import moved_identifier
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
@@ -153,7 +153,10 @@ class BorrowsMixin:
         if isinstance(primary, P.MatchPContext):
             return any(self.points_to_local(arm.expression()) for arm in primary.matchExpr().matchArm())
         if isinstance(primary, P.BlockPContext):
-            tail = primary.block().expression()
+            tail = block_tail(primary.block())
+            return tail is not None and self.points_to_local(tail)
+        if isinstance(expression, P.BlockContext):  # bloque promovido por block_tail
+            tail = block_tail(expression)
             return tail is not None and self.points_to_local(tail)
         return False
 

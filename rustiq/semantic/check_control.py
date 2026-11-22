@@ -13,19 +13,24 @@ from rustiq.errors import (
     E_TYPE_MISMATCH,
 )
 from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.semantic.flow import block_tail
 from rustiq.types import BOOL, UNIT, Type
 
 
 class ControlMixin:
     def visitBlock(self, ctx: RustiQParser.BlockContext):
         self.push_scope()
-        for statement in ctx.statement():
+        tail_node = block_tail(ctx)
+        statements = ctx.statement()
+        if tail_node is not None and tail_node is not ctx.expression():
+            statements = statements[:-1]  # `{ { 3 } }`: el bloque interno es el valor
+        for statement in statements:
             mark = self.borrow_mark()
             self.visit(statement)
             self.release_temporary_borrows(mark)
-        tail = self.visit(ctx.expression()) if ctx.expression() is not None else UNIT
-        if ctx.expression() is not None:
-            self.consume(ctx.expression())
+        tail = self.visit(tail_node) if tail_node is not None else UNIT
+        if tail_node is not None:
+            self.consume(tail_node)
         self.pop_scope()
         if tail is not None:
             self.info.expr_type.put(ctx, tail)
@@ -76,7 +81,7 @@ class ControlMixin:
         actual = self.visit(block)
         if actual is not None and actual != UNIT:
             self.error(
-                block.expression(), E_TYPE_MISMATCH,
+                block_tail(block), E_TYPE_MISMATCH,
                 f"{what} no puede producir un valor ({actual}); agrega ';' o usa return",
             )
 

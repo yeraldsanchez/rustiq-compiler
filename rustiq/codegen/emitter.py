@@ -19,7 +19,7 @@ from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser
-from rustiq.semantic.flow import expression_diverges
+from rustiq.semantic.flow import block_tail, expression_diverges
 from rustiq.semantic.info import SemanticInfo, Symbol
 from rustiq.types import I32, UNIT, Type
 
@@ -201,7 +201,7 @@ class Emitter(
         outer_depth, self._depth = self._depth, self._depth + 1
         self._box_params(ctx)
         self.visit(ctx.block())
-        tail = ctx.block().expression()
+        tail = block_tail(ctx.block())
         if sig.ret != UNIT and (tail is None or expression_diverges(tail)):
             # Sin expresión final, todos los caminos terminan en return o en un loop sin
             # salida (lo garantiza el análisis). `unreachable` cierra el tipo de la función.
