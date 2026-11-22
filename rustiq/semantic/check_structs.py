@@ -70,6 +70,10 @@ class StructsMixin:
         if definition is None:
             self.error(ctx.IDENT(), E_UNKNOWN_TYPE, f"El struct '{name}' no existe")
             return None
+        provided_names = {fi.IDENT().getText() for fi in inits}
+        missing = [f for f in definition.fields if f not in provided_names]
+        if missing:
+            self.error(ctx.IDENT(), E_MISSING_FIELD, f"Faltan campos en '{name}': {', '.join(missing)}")
         seen = set()
         for fi, actual in zip(inits, types):
             fname = fi.IDENT().getText()
@@ -85,9 +89,6 @@ class StructsMixin:
                 )
         for fi in inits:
             self.consume(fi.expression())
-        missing = [f for f in definition.fields if f not in seen]
-        if missing:
-            self.error(ctx.IDENT(), E_MISSING_FIELD, f"Faltan campos en '{name}': {', '.join(missing)}")
         result = StructT(name)
         self.info.expr_type.put(ctx, result)
         return result

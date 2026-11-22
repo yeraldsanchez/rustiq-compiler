@@ -41,6 +41,8 @@ class Analyzer(
         self.move_states: dict[int, str] = {}  # uid -> estado (moves.py)
         self.move_loop_depth: dict[int, int] = {}  # uid -> ciclos abiertos al declararlo
         self.moved_in_branches: list[set[int]] = []  # uids movidos en cada if/match abierto
+        # Initialize borrow tracking
+        BorrowsMixin.__init__(self)
 
     def analyze(self, tree) -> tuple[SemanticInfo, list[CompileError]]:
         self.visit(tree)

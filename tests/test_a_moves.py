@@ -109,7 +109,6 @@ def test_uso_antes_de_asignar():
     assert errores_reales(src) == [(E_UNINITIALIZED, 6, 10)]
 
 
-@espera_carril_b
 def test_mover_un_valor_prestado():
     src = PUNTO + "fn main() {\n    let a = Punto { x: 1, y: 2 };\n    let r = &a;\n    usar(a);\n}"
     assert errores_reales(src) == [(E_MOVE_WHILE_BORROWED, 7, 10)]

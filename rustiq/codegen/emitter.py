@@ -108,6 +108,8 @@ class Emitter(
         self._depth = 0
         self._fn = None
         self.global_consts = {}
+        self._data_segments = []
+        self._data_offset = 0
         self.emit("(module")
         self._depth += 1
         for name, param_type in HOST_FUNCTIONS:
@@ -116,6 +118,9 @@ class Emitter(
         for line in RUNTIME_WAT.splitlines():
             self.emit(line)
         self.visit(tree)
+        for offset, data in getattr(self, "_data_segments", []):
+            escaped = "".join(f"\\{b:02x}" for b in data)
+            self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self._depth -= 1
         self.emit(")")
         return "\n".join(self._lines) + "\n"

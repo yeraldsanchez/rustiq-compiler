@@ -1,0 +1,6 @@
+// ERROR semantico E_MOVE_WHILE_BORROWED 5:5
+fn main() {
+    let mut x = 5;
+    let r = &x; // préstamo shared
+    x = 10;      // intento de mover -> debe fallar
+}
