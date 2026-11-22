@@ -270,7 +270,7 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 - [x] Literales y operadores: aritmética, comparaciones, `-` y `!`, `&&` y `||` con cortocircuito. Tipos y codegen (pasados a main por A desde la rama de B)
 - [ ] Inferencia de `let` sin tipo, y `let` sin inicializador con uso antes de asignar
 - [x] Mutabilidad: `=`, `+=`, `-=`, `*=`, `/=` solo sobre valores `mut` (lo hizo A con permiso de B, en `check_assign.py`)
-- [ ] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen
+- [x] Arrays: tipo, literal, indexación y chequeo de límites con `unreachable`. Tipos y codegen (lo hizo A con permiso de B)
 - [ ] Inválidos de sus características
 
 - [ ] **Sincronización mar 10:** un programa con función, `let`, aritmética e `if` compila de punta a punta.
@@ -292,9 +292,9 @@ Juntos. Nadie empieza su carril hasta cerrar esto.
 **B**
 
 - [ ] Strings: literales en el segmento de datos, `print_str`, move, paso y retorno. Sin concatenación ni comparación (P9)
-- [ ] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen
-- [ ] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
-- [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales
+- [x] Referencias: `&`, `&mut`, `*` de lectura y celdas para escalares con `address_taken`. Tipos y codegen (celdas y codegen los hizo A con permiso de B)
+- [x] Préstamos: varios `&` o un solo `&mut` hasta el fin del ámbito del préstamo
+- [ ] `&mut` solo sobre variables `mut`, no asignar con préstamo activo, no retornar referencias a locales. Falta solo `E_RETURN_LOCAL_REF`
 - [ ] Resaltado de sintaxis RustiQ en el editor
 - [ ] Inválidos de sus características
 
