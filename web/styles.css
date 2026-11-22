@@ -59,6 +59,11 @@ p {
   margin: 0;
 }
 
+/* `hidden` debe ganarle a los `display` de los tiles. */
+[hidden] {
+  display: none !important;
+}
+
 code {
   font-family: var(--font-mono);
   font-size: 0.92em;
@@ -308,7 +313,7 @@ code {
   font-weight: 600;
 }
 
-/* --- Editor (placeholder hasta CodeMirror) -------------------------------- */
+/* --- Editor --------------------------------------------------------------- */
 
 .filename {
   font: 500 12.5px var(--font-mono);
@@ -320,56 +325,22 @@ code {
   align-items: center;
 }
 
-.code {
+.editor-host {
   flex: 1;
-  display: flex;
-  overflow: auto;
-  font: 13px/1.65 var(--font-mono);
+  min-height: 0;
 }
 
-.code pre {
-  margin: 0;
-  padding: 12px 0;
-  font: inherit;
+.editor-host .cm-editor {
+  height: 100%;
 }
 
-.gutter {
-  flex: none;
-  min-width: 48px;
-  padding-inline: 0 12px !important;
-  text-align: right;
-  color: var(--muted);
-  user-select: none;
-}
-
-.gutter .has-error {
-  color: var(--error);
-  box-shadow: inset 2px 0 0 var(--error);
-  display: inline-block;
-  width: 100%;
-}
-
-.source {
-  flex: 1;
-  padding-inline: 4px var(--pad) !important;
-  color: var(--text-2);
-}
-
-.line-active {
-  display: inline-block;
-  min-width: 100%;
-  background: var(--hover);
-}
-
-.kw  { color: var(--kw); }
-.ty  { color: var(--ty); }
-.fn  { color: var(--fn); }
-.num { color: var(--num); }
-
-.err-mark {
-  text-decoration: underline wavy var(--error);
-  text-decoration-skip-ink: none;
-  text-underline-offset: 4px;
+/* El resto del tema de CodeMirror vive en src/editor/theme.ts. Aquí solo lo
+   que CodeMirror no deja configurar desde su API de temas. */
+.editor-host .cm-lint-marker-error {
+  content: none;
+  width: 3px;
+  height: 100%;
+  background: var(--error);
 }
 
 /* --- Indicadores ---------------------------------------------------------- */
@@ -403,6 +374,7 @@ code {
 .stat-value.is-error { color: var(--error); }
 .stat-value.is-ok    { color: var(--ok); }
 .stat-value.is-empty { color: var(--muted); }
+.stat-value.is-warn  { color: var(--warn); }
 
 /* --- Salida --------------------------------------------------------------- */
 
@@ -451,9 +423,21 @@ code {
   font: 13px/1.5 var(--font-ui);
 }
 
-/* Error en tiempo de ejecución (trap de Wasm). */
-.trap {
+/* Avisos que agrega el editor, no el programa. */
+.console .note {
+  color: var(--muted);
+}
+
+/* Error en tiempo de ejecución (trap de Wasm), tiempo agotado o límite. */
+.console .trap {
   color: var(--warn);
+}
+
+/* El WAT conserva sus líneas y se desplaza en horizontal. */
+.console .wat {
+  color: var(--text-2);
+  white-space: pre;
+  width: max-content;
 }
 
 /* --- Errores -------------------------------------------------------------- */
@@ -493,10 +477,17 @@ code {
 
 .error-msg {
   color: var(--text);
+  /* Los errores de backend traen rutas y WAT largos sin espacios. */
+  overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 .error-msg code {
   color: var(--fn);
+}
+
+.errors-empty {
+  padding: 12px var(--pad);
 }
 
 .error-meta {
