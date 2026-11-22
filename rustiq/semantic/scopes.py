@@ -1,8 +1,16 @@
 """Tabla de símbolos, resolución de ámbitos y declaraciones locales (Carril B)."""
 
-from rustiq.errors import E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
+from rustiq.errors import E_BORROW_CONFLICT, E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import Symbol
 from rustiq.types import RefT, Type, UNIT
+
+
+def _is_borrow_operand(ident) -> bool:
+    """True si el identificador es la raíz de lo que se presta: `&x`, `&mut x.campo`."""
+    postfix = ident.parentCtx
+    unary = postfix.parentCtx if isinstance(postfix, P.PostfixContext) else None
+    return isinstance(unary, P.UnaryContext) and unary.AMP() is not None
 
 
 class ScopesMixin:
@@ -113,5 +121,10 @@ class ScopesMixin:
             return None
 
         self.info.symbol.put(ctx, symbol)
-        self.check_use(symbol, ctx)
+        if self.check_use(symbol, ctx) and not _is_borrow_operand(ctx) and self.is_mutably_borrowed(symbol):
+            # Mientras vive un `&mut`, el dueño no se puede leer (`&x` lo revisa visitUnary).
+            self.error(
+                ctx, E_BORROW_CONFLICT,
+                f"'{name}' tiene un préstamo mutable activo y no se puede usar hasta que termine",
+            )
         return symbol.type

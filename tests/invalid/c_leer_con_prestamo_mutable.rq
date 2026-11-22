@@ -1,0 +1,12 @@
+// ERROR semantico E_BORROW_CONFLICT 10:15
+struct Punto {
+    x: i32,
+    y: i32,
+}
+
+fn main() {
+    let mut p = Punto { x: 1, y: 2 };
+    let r = &mut p;
+    print_i32(p.x);
+    r.x = 5;
+}
