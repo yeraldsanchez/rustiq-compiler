@@ -1,7 +1,9 @@
 /** Editor de código: CodeMirror 6 con resaltado de Rust y los errores del
  *  compilador marcados en el texto. */
 
+import { indentWithTab } from "@codemirror/commands";
 import { rust } from "@codemirror/lang-rust";
+import { indentUnit } from "@codemirror/language";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { EditorSelection, Prec, type Text } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
@@ -9,6 +11,9 @@ import { basicSetup } from "codemirror";
 
 import { PHASE_LABEL, type CompileError } from "../types";
 import { rustiqTheme } from "./theme";
+
+// Sangría de 4 espacios, como en Rust.
+const INDENT = "    ";
 
 export interface EditorCallbacks {
   onChange(source: string): void;
@@ -31,6 +36,9 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
       { key: "Mod-b", run: () => (callbacks.onCompile(), true) },
       // El código se guarda solo; esto evita el diálogo de guardar del navegador.
       { key: "Mod-s", run: () => true },
+      // Tab indenta en vez de mover el foco. Para salir del editor con el
+      // teclado: Esc y luego Tab (comportamiento de CodeMirror).
+      indentWithTab,
     ]),
   );
 
@@ -40,6 +48,7 @@ export function createEditor(parent: HTMLElement, initial: string, callbacks: Ed
     extensions: [
       basicSetup,
       rust(),
+      indentUnit.of(INDENT),
       lintGutter(),
       rustiqTheme,
       shortcuts,
