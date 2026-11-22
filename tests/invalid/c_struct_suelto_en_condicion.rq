@@ -1,0 +1,9 @@
+// ERROR sintactico E_SYNTAX 7:8
+struct Punto {
+    x: i32,
+}
+
+fn main() {
+    if Punto { x: 1 }.x == 1 {
+    }
+}

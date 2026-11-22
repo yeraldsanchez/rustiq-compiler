@@ -7,7 +7,8 @@ grammar RustiQ;
 
 @parser::members {
 # Pila para desambiguar "identificador {" entre struct literal y bloque.
-# En la condicion de if/while y en el valor de match no se admiten struct literals.
+# En la condicion de if/while y en el valor de match no se admiten struct literals,
+# salvo dentro de (), [], {} o los argumentos de una llamada, donde ya no hay ambigüedad.
 def ns(self):
     if not hasattr(self, "_ns"):
         self._ns = [False]
@@ -89,7 +90,7 @@ primitiveType
 // ---------------------------------------------------------------
 
 block
-    : LBRACE statement* expression? RBRACE
+    : LBRACE {self.ns().append(False)} statement* expression? {self.ns().pop()} RBRACE
     ;
 
 statement
@@ -192,7 +193,7 @@ postfix
     ;
 
 callSuffix
-    : LPAREN argumentList? RPAREN
+    : LPAREN {self.ns().append(False)} argumentList? {self.ns().pop()} RPAREN
     ;
 
 argumentList
@@ -204,7 +205,7 @@ fieldSuffix
     ;
 
 indexSuffix
-    : LBRACK expression RBRACK
+    : LBRACK {self.ns().append(False)} expression {self.ns().pop()} RBRACK
     ;
 
 primary
@@ -220,11 +221,11 @@ primary
     ;
 
 tupleLiteral
-    : LPAREN expression (COMMA expression)+ COMMA? RPAREN
+    : LPAREN {self.ns().append(False)} expression (COMMA expression)+ COMMA? {self.ns().pop()} RPAREN
     ;
 
 arrayLiteral
-    : LBRACK expression (COMMA expression)* COMMA? RBRACK
+    : LBRACK {self.ns().append(False)} expression (COMMA expression)* COMMA? {self.ns().pop()} RBRACK
     ;
 
 structLiteral
@@ -236,7 +237,7 @@ fieldInit
     ;
 
 enumValue
-    : IDENT COLONCOLON IDENT (LPAREN argumentList RPAREN)?
+    : IDENT COLONCOLON IDENT (LPAREN {self.ns().append(False)} argumentList {self.ns().pop()} RPAREN)?
     ;
 
 // ---------------------------------------------------------------
