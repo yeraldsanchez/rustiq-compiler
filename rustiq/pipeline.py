@@ -75,22 +75,21 @@ class BackendError(Exception):
 # --- Parse -----------------------------------------------------------------
 
 
-class _ErrorCollector(ErrorListener):
+class _SyntaxErrorCollector(ErrorListener):
     """Errores sintácticos de ANTLR como CompileError en vez de imprimirlos.
 
     Los léxicos van aparte: `_LexErrorCollector` y los tokens de error del lexer.
     """
 
-    def __init__(self, phase: str, code: str) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.phase, self.code = phase, code
         self.errors: list[CompileError] = []
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         text = getattr(offendingSymbol, "text", None)
         length = len(text) if text and text != "<EOF>" else 1
         self.errors.append(
-            CompileError(self.phase, self.code, f"Error: {msg}", line, column + 1, length)
+            CompileError(SINTACTICO, E_SYNTAX, f"Error: {msg}", line, column + 1, length)
         )
 
 
@@ -169,7 +168,7 @@ def parse_source(source: str):
     tokens = CommonTokenStream(lexer)
     parser = RustiQParser(tokens)
     lex_errors = _LexErrorCollector()
-    syntax_errors = _ErrorCollector(SINTACTICO, E_SYNTAX)
+    syntax_errors = _SyntaxErrorCollector()
     for recognizer, listener in ((lexer, lex_errors), (parser, syntax_errors)):
         recognizer.removeErrorListeners()
         recognizer.addErrorListener(listener)
