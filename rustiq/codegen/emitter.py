@@ -19,7 +19,7 @@ from rustiq.codegen.gen_structs import StructsGenMixin
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.builtins import HOST_FUNCTIONS
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import block_tail, expression_diverges
 from rustiq.semantic.info import SemanticInfo, Symbol
 from rustiq.tree import split_call
@@ -61,7 +61,7 @@ class Emitter(
         self._lines: list[str] = []
         self._depth = 0
         self._fn: FunctionCtx | None = None
-        self.global_consts: dict[int, RustiQParser.ExpressionContext] = {}  # uid -> inicializador
+        self.global_consts: dict[int, P.ExpressionContext] = {}  # uid -> inicializador
         self._data_segments: list[tuple[int, bytes]] = []  # (dirección, bytes) de cada literal
         self._data_offset = 0  # primera dirección libre de la zona de literales
 
@@ -192,7 +192,7 @@ class Emitter(
         self._lines[memory_line] = f'{indent}(memory (export "memory") {pages})'
         self._lines[heap_line] = f"{indent}(global $heap (mut i32) (i32.const {heap_start}))"
 
-    def visitProgram(self, ctx: RustiQParser.ProgramContext):
+    def visitProgram(self, ctx: P.ProgramContext):
         for item in ctx.item():
             decl = item.constDecl()
             symbol = self.info.symbol.get(decl) if decl is not None else None
@@ -201,12 +201,12 @@ class Emitter(
         for item in ctx.item():
             self.visit(item)
 
-    def visitItem(self, ctx: RustiQParser.ItemContext):
+    def visitItem(self, ctx: P.ItemContext):
         # Structs y enums no emiten código por sí mismos; las constantes llegan después.
         if ctx.functionDecl() is not None:
             self.visit(ctx.functionDecl())
 
-    def visitFunctionDecl(self, ctx: RustiQParser.FunctionDeclContext):
+    def visitFunctionDecl(self, ctx: P.FunctionDeclContext):
         name = ctx.IDENT().getText()
         sig = self.info.functions[name]
         self._fn = FunctionCtx(name)
@@ -240,7 +240,7 @@ class Emitter(
         self.emit(")")
         self._fn = None
 
-    def _box_params(self, ctx: RustiQParser.FunctionDeclContext) -> None:
+    def _box_params(self, ctx: P.FunctionDeclContext) -> None:
         """Copia a una celda cada parámetro escalar con `&` aplicado, al entrar."""
         if ctx.parameterList() is None:
             return
@@ -252,7 +252,7 @@ class Emitter(
                 self.emit(f"local.get {self.local_name(symbol)}")
                 self.emit(f"{wasm_type(symbol.type)}.store")
 
-    def _param_names(self, ctx: RustiQParser.FunctionDeclContext, sig) -> list[str]:
+    def _param_names(self, ctx: P.FunctionDeclContext, sig) -> list[str]:
         """Nombre Wasm de cada parámetro: por uid si hay símbolo, si no por posición."""
         if ctx.parameterList() is None:
             return []
@@ -268,7 +268,7 @@ class Emitter(
     # `info.expr_type[sufijo]`. visitCallSuffix y visitFieldSuffix son de A,
     # visitIndexSuffix de B.
 
-    def visitPostfix(self, ctx: RustiQParser.PostfixContext):
+    def visitPostfix(self, ctx: P.PostfixContext):
         self.emit_postfix(ctx.primary(), ctx.children[1:])
 
     def emit_postfix(self, primary, suffixes: list) -> None:
@@ -281,5 +281,5 @@ class Emitter(
         for suffix in suffixes:
             self.visit(suffix)
 
-    def visitConstDecl(self, ctx: RustiQParser.ConstDeclContext):
+    def visitConstDecl(self, ctx: P.ConstDeclContext):
         return None  # las constantes globales se expanden en cada uso

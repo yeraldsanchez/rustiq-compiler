@@ -10,7 +10,7 @@ se sale.
 
 from rustiq.codegen.gen_structs import SLOT_SIZE
 from rustiq.codegen.wasm_types import wasm_type
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import I32, ArrayT, RefT, Type
 
 
@@ -20,17 +20,17 @@ def array_of(operand: Type) -> ArrayT:
 
 
 class ArraysGenMixin:
-    def visitArrayP(self, ctx: RustiQParser.ArrayPContext):
+    def visitArrayP(self, ctx: P.ArrayPContext):
         self.visit(ctx.arrayLiteral())
 
-    def visitArrayLiteral(self, ctx: RustiQParser.ArrayLiteralContext):
+    def visitArrayLiteral(self, ctx: P.ArrayLiteralContext):
         array = self.info.expr_type.get(ctx)
         pointer = self.alloc_slots(array.size)
         for index, element in enumerate(ctx.expression()):
             self.store_slot(pointer, index, array.elem, element)
         self.emit(f"local.get {pointer}")
 
-    def visitIndexSuffix(self, ctx: RustiQParser.IndexSuffixContext):
+    def visitIndexSuffix(self, ctx: P.IndexSuffixContext):
         array = array_of(self.info.expr_type.get(ctx))
         self.emit_element_address(ctx.expression(), array.size)
         self.emit(f"{wasm_type(array.elem)}.load")

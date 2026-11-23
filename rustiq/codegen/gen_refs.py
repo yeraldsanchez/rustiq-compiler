@@ -4,7 +4,7 @@ Dueño: B (Byron). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo
 nunca vuelve a inferir tipos.
 """
 
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 
 
 # Secuencias de escape de un literal (fragmento ESC de la gramática).
@@ -38,7 +38,7 @@ class RefsGenMixin:
         self.emit(f"i32.const {len(data)}")
         self.emit("call $str_new")
 
-    def visitLiteralP(self, ctx: RustiQParser.LiteralPContext):
+    def visitLiteralP(self, ctx: P.LiteralPContext):
         lit = ctx.literal()
         if lit is not None and lit.STRING_LIT() is not None:
             self.emit_string_literal(lit.STRING_LIT().getText())

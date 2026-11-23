@@ -9,18 +9,18 @@ etiquetas con nombre, así `break` y `continue` saltan al ciclo correcto sin
 contar profundidades.
 """
 
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import UNIT
 
 
 class ControlGenMixin:
-    def visitBlock(self, ctx: RustiQParser.BlockContext):
+    def visitBlock(self, ctx: P.BlockContext):
         for statement in ctx.statement():
             self.visit(statement)
         if ctx.expression() is not None:
             self.visit(ctx.expression())
 
-    def visitExprStmt(self, ctx: RustiQParser.ExprStmtContext):
+    def visitExprStmt(self, ctx: P.ExprStmtContext):
         self.visit(ctx.expression())
         produced = self.info.expr_type.get(ctx.expression())
         if produced is not None and produced != UNIT:
@@ -28,7 +28,7 @@ class ControlGenMixin:
 
     # --- if / while / loop -----------------------------------------------
 
-    def visitIfStmt(self, ctx: RustiQParser.IfStmtContext):
+    def visitIfStmt(self, ctx: P.IfStmtContext):
         self.visit(ctx.condition())
         self.emit("if")
         with self.indented():
@@ -40,10 +40,10 @@ class ControlGenMixin:
                 self.visit(ctx.block(1) if has_else_block else ctx.ifStmt())
         self.emit("end")
 
-    def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
+    def visitWhileStmt(self, ctx: P.WhileStmtContext):
         self._gen_loop(ctx.block(), ctx.condition())
 
-    def visitLoopStmt(self, ctx: RustiQParser.LoopStmtContext):
+    def visitLoopStmt(self, ctx: P.LoopStmtContext):
         self._gen_loop(ctx.block(), None)
 
     def _gen_loop(self, body, condition) -> None:
@@ -64,20 +64,20 @@ class ControlGenMixin:
 
     # --- break / continue / return -------------------------------------------
 
-    def visitBreakStmt(self, ctx: RustiQParser.BreakStmtContext):
+    def visitBreakStmt(self, ctx: P.BreakStmtContext):
         self.emit(f"br {self.fn.loops[-1][0]}")
 
-    def visitContinueStmt(self, ctx: RustiQParser.ContinueStmtContext):
+    def visitContinueStmt(self, ctx: P.ContinueStmtContext):
         self.emit(f"br {self.fn.loops[-1][1]}")
 
-    def visitReturnStmt(self, ctx: RustiQParser.ReturnStmtContext):
+    def visitReturnStmt(self, ctx: P.ReturnStmtContext):
         if ctx.expression() is not None:
             self.visit(ctx.expression())
         self.emit("return")
 
     # --- const local --------------------------------------------------------------
 
-    def visitConstLocalDecl(self, ctx: RustiQParser.ConstLocalDeclContext):
+    def visitConstLocalDecl(self, ctx: P.ConstLocalDeclContext):
         symbol = self.info.symbol.get(ctx)
         self.declare_symbol(symbol)
         self.store_symbol(symbol, lambda: self.visit(ctx.expression()))

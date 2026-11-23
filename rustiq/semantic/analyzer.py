@@ -8,7 +8,7 @@ from antlr4 import ParserRuleContext
 from antlr4.tree.Tree import TerminalNode
 
 from rustiq.errors import E_NOT_CALLABLE, E_TYPE_MISMATCH, SEMANTICO, CompileError
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.semantic.borrows import BorrowsMixin
 from rustiq.semantic.check_assign import AssignMixin
@@ -78,7 +78,7 @@ class Analyzer(
     #   - visitFieldSuffix: A
     #   - visitIndexSuffix: B
 
-    def visitPostfix(self, ctx: RustiQParser.PostfixContext):
+    def visitPostfix(self, ctx: P.PostfixContext):
         primary = ctx.primary()
         call, suffixes = split_call(primary, ctx.children[1:])
         current = self.check_call(primary, call) if call is not None else self.visit(primary)
@@ -90,7 +90,7 @@ class Analyzer(
             self.info.expr_type.put(ctx, current)
         return current
 
-    def visitCallSuffix(self, ctx: RustiQParser.CallSuffixContext):
+    def visitCallSuffix(self, ctx: P.CallSuffixContext):
         self.error(ctx, E_NOT_CALLABLE, "Solo se pueden llamar funciones por su nombre")
         return None
 

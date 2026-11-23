@@ -9,7 +9,7 @@ B en `b/etapa3-refs-borrows`, pasados por A, con cortocircuito en `&&` y `||`.
 from rustiq.codegen.gen_arrays import array_of
 from rustiq.codegen.gen_structs import SLOT_SIZE, slot_offset
 from rustiq.codegen.wasm_types import wasm_type
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.check_exprs import operators
 from rustiq.tree import place_accessors
 from rustiq.types import F64, Type, is_scalar
@@ -25,7 +25,7 @@ BINARY_F64 = {
 }
 
 # Sufijos que nombran una ranura: se puede tomar su dirección.
-ACCESSORS = (RustiQParser.FieldSuffixContext, RustiQParser.IndexSuffixContext)
+ACCESSORS = (P.FieldSuffixContext, P.IndexSuffixContext)
 
 
 # Escapes de un literal de char (fragmento ESC de la gramática).
@@ -42,7 +42,7 @@ def char_value(raw_literal: str) -> int:
 
 
 class ExprsGenMixin:
-    def visitLiteral(self, ctx: RustiQParser.LiteralContext):
+    def visitLiteral(self, ctx: P.LiteralContext):
         text = ctx.getText()
         if ctx.INT_LIT() is not None:
             self.emit(f"i32.const {text}")
@@ -55,24 +55,24 @@ class ExprsGenMixin:
         else:
             self.emit(f"i32.const {1 if ctx.TRUE() is not None else 0}")
 
-    def visitLetDecl(self, ctx: RustiQParser.LetDeclContext):
+    def visitLetDecl(self, ctx: P.LetDeclContext):
         symbol = self.info.symbol.get(ctx)
         if symbol is not None:
             self.declare_symbol(symbol)
             if ctx.expression() is not None:
                 self.store_symbol(symbol, lambda: self.visit(ctx.expression()))
 
-    def visitIdentP(self, ctx: RustiQParser.IdentPContext):
+    def visitIdentP(self, ctx: P.IdentPContext):
         symbol = self.info.symbol.get(ctx)
         if symbol is not None:
             self.load_symbol(symbol)
 
-    def visitParenP(self, ctx: RustiQParser.ParenPContext):
+    def visitParenP(self, ctx: P.ParenPContext):
         self.visit(ctx.expression())
 
     # --- Operadores ------------------------------------------------------------
 
-    def visitUnary(self, ctx: RustiQParser.UnaryContext):
+    def visitUnary(self, ctx: P.UnaryContext):
         operand = ctx.postfix()
         if ctx.MINUS() is not None:
             if self.info.expr_type.get(operand) == F64:
@@ -109,7 +109,7 @@ class ExprsGenMixin:
     def _boxed_variable(self, postfix):
         """El símbolo si `postfix` es solo una variable guardada en celda; si no None."""
         primary = postfix.primary()
-        if postfix.getChildCount() != 1 or not isinstance(primary, RustiQParser.IdentPContext):
+        if postfix.getChildCount() != 1 or not isinstance(primary, P.IdentPContext):
             return None
         symbol = self.info.symbol.get(primary)
         return symbol if symbol is not None and symbol.address_taken else None
@@ -119,7 +119,7 @@ class ExprsGenMixin:
         *leading, last = postfix.children[1:]
         self.emit_postfix(postfix.primary(), leading)
         owner = self.info.expr_type.get(last)
-        if isinstance(last, RustiQParser.FieldSuffixContext):
+        if isinstance(last, P.FieldSuffixContext):
             self.emit_slot_address(owner, field=last.IDENT().getText())
         else:
             self.emit_slot_address(owner, index=last.expression())
@@ -145,13 +145,13 @@ class ExprsGenMixin:
         self.emit_element_address(index, array.size)
         return array.elem
 
-    def visitMultiplicative(self, ctx: RustiQParser.MultiplicativeContext):
+    def visitMultiplicative(self, ctx: P.MultiplicativeContext):
         self._arithmetic_chain(ctx.unary(), operators(ctx))
 
-    def visitAdditive(self, ctx: RustiQParser.AdditiveContext):
+    def visitAdditive(self, ctx: P.AdditiveContext):
         self._arithmetic_chain(ctx.multiplicative(), operators(ctx))
 
-    def visitComparison(self, ctx: RustiQParser.ComparisonContext):
+    def visitComparison(self, ctx: P.ComparisonContext):
         ops = operators(ctx.relOp()) if ctx.relOp() is not None else []
         self._arithmetic_chain(ctx.additive(), ops)
 
@@ -163,11 +163,11 @@ class ExprsGenMixin:
             self.visit(operand)
             self.emit(f"{wasm_type(operand_type)}.{table[op]}")
 
-    def visitLogicalAnd(self, ctx: RustiQParser.LogicalAndContext):
+    def visitLogicalAnd(self, ctx: P.LogicalAndContext):
         # a && b: si a es true vale b; si no, false sin evaluar b
         self._short_circuit(ctx.comparison(), on_true=None, on_false="i32.const 0")
 
-    def visitLogicalOr(self, ctx: RustiQParser.LogicalOrContext):
+    def visitLogicalOr(self, ctx: P.LogicalOrContext):
         # a || b: si a es true vale true sin evaluar b; si no, vale b
         self._short_circuit(ctx.logicalAnd(), on_true="i32.const 1", on_false=None)
 
@@ -191,7 +191,7 @@ class ExprsGenMixin:
 
     # --- Asignación ------------------------------------------------------------
 
-    def visitAssignment(self, ctx: RustiQParser.AssignmentContext):
+    def visitAssignment(self, ctx: P.AssignmentContext):
         symbol = self.info.symbol.get(ctx)
         op = ctx.assignOp().getText()
         accessors = list(place_accessors(ctx.place()))

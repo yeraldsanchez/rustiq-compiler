@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
+from rustiq.semantic.flow import bare_primary, block_tail
 from rustiq.semantic.info import VARIABLE_KINDS
 from rustiq.semantic.moves import moved_identifier
 from rustiq.tree import call_args, split_call, unwrap
@@ -145,7 +145,7 @@ class BorrowsMixin:
         if args:
             # Sin anotaciones de vida, el resultado puede venir de cualquier argumento.
             return any(self.points_to_local(arg) for arg in args)
-        primary = _bare_primary(expression)
+        primary = bare_primary(expression)
         if isinstance(primary, P.MatchPContext):
             return any(self.points_to_local(arm.expression()) for arm in primary.matchExpr().matchArm())
         if isinstance(primary, P.BlockPContext):
