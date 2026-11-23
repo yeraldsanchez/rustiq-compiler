@@ -1,6 +1,6 @@
 # Representación en memoria
 
-Contrato 5 del plan. Lo mantiene la Persona A. Si se cambia algo aquí, se documenta antes de tocar el código.
+Cómo guarda RustiQ cada tipo de valor en la memoria lineal de WebAssembly y qué funciones del runtime la manejan.
 
 ## Modelo
 
@@ -46,6 +46,6 @@ Implementación en `rustiq/codegen/runtime.wat`. El Emitter la pega dentro de ca
 
 - Exporta `memory` y `main`.
 - Importa desde `env`: `print_i32`, `print_f64`, `print_bool`, `print_char`, `print_str`.
-- El host se implementa dos veces con el mismo comportamiento: Python (`rustiq/host.py`, para las pruebas) y navegador (`web/src/run/worker.ts`, con el formato de `web/src/run/format.ts`). `print_f64` usa el formato de Python en ambos (G13 de `decisiones.md`).
+- El host se implementa dos veces con el mismo comportamiento: Python (`rustiq/host.py`, para las pruebas) y navegador (`web/src/run/worker.ts`, con el formato de `web/src/run/format.ts`). `print_f64` usa el formato de Python en ambos (ver «Diferencias con Rust» en `decisiones.md`).
 
 Las funciones del usuario se emiten con el prefijo `$f_` (`fn suma` es `$f_suma`), así no chocan con las del runtime. Las del host conservan su nombre.
