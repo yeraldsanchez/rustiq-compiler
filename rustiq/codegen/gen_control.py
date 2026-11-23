@@ -31,15 +31,13 @@ class ControlGenMixin:
     def visitIfStmt(self, ctx: RustiQParser.IfStmtContext):
         self.visit(ctx.condition())
         self.emit("if")
-        self._depth += 1
-        self.visit(ctx.block(0))
-        self._depth -= 1
+        with self.indented():
+            self.visit(ctx.block(0))
         has_else_block = len(ctx.block()) == 2
         if has_else_block or ctx.ifStmt() is not None:
             self.emit("else")
-            self._depth += 1
-            self.visit(ctx.block(1) if has_else_block else ctx.ifStmt())
-            self._depth -= 1
+            with self.indented():
+                self.visit(ctx.block(1) if has_else_block else ctx.ifStmt())
         self.emit("end")
 
     def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
@@ -52,16 +50,15 @@ class ControlGenMixin:
         exit_label, next_label = self.new_label("salir"), self.new_label("sigue")
         self.emit(f"block {exit_label}")
         self.emit(f"loop {next_label}")
-        self._depth += 1
-        if condition is not None:
-            self.visit(condition)
-            self.emit("i32.eqz")
-            self.emit(f"br_if {exit_label}")
-        self.fn.loops.append((exit_label, next_label))
-        self.visit(body)
-        self.fn.loops.pop()
-        self.emit(f"br {next_label}")
-        self._depth -= 1
+        with self.indented():
+            if condition is not None:
+                self.visit(condition)
+                self.emit("i32.eqz")
+                self.emit(f"br_if {exit_label}")
+            self.fn.loops.append((exit_label, next_label))
+            self.visit(body)
+            self.fn.loops.pop()
+            self.emit(f"br {next_label}")
         self.emit("end")
         self.emit("end")
 

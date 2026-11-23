@@ -5,6 +5,7 @@ reglas. Esta clase aporta lo común: el módulo, las líneas de salida y los
 imports del host (ABI en docs/memoria.md).
 """
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -53,10 +54,16 @@ class Emitter(
 ):
     def __init__(self, info: SemanticInfo) -> None:
         self.info = info
+        self._reset()
+
+    def _reset(self) -> None:
+        """Estado de una emisión. `generate` lo reinicia para poder reutilizar el Emitter."""
         self._lines: list[str] = []
         self._depth = 0
         self._fn: FunctionCtx | None = None
-        self.global_consts: dict[int, RustiQParser.ExpressionContext] = {}
+        self.global_consts: dict[int, RustiQParser.ExpressionContext] = {}  # uid -> inicializador
+        self._data_segments: list[tuple[int, bytes]] = []  # (dirección, bytes) de cada literal
+        self._data_offset = 0  # primera dirección libre de la zona de literales
 
     # --- Convención de los visitX de expresión ----------------------------
     #
@@ -65,6 +72,15 @@ class Emitter(
 
     def emit(self, line: str = "") -> None:
         self._lines.append(INDENT * self._depth + line)
+
+    @contextmanager
+    def indented(self):
+        """Las líneas emitidas dentro del `with` van un nivel más adentro."""
+        self._depth += 1
+        try:
+            yield
+        finally:
+            self._depth -= 1
 
     # --- Contexto de función ---------------------------------------------
 
@@ -131,6 +147,10 @@ class Emitter(
         self.fn.temps += 1
         return self.declare_local(f"$tmp{self.fn.temps}", t)
 
+    def new_pointer_temp(self) -> str:
+        """Local temporal para guardar una dirección de memoria."""
+        return self.new_temp(I32)
+
     def new_label(self, prefix: str) -> str:
         """Etiqueta única dentro de la función, para block, loop e if."""
         self.fn.labels += 1
@@ -140,29 +160,23 @@ class Emitter(
 
     def generate(self, tree) -> str:
         """Devuelve el módulo WAT completo."""
-        self._lines = []
-        self._depth = 0
-        self._fn = None
-        self.global_consts = {}
-        self._data_segments = []
-        self._data_offset = 0
+        self._reset()
         self.emit("(module")
-        self._depth += 1
-        for name, param_type in HOST_FUNCTIONS:
-            self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
-        memory_line = len(self._lines)
-        self.emit('(memory (export "memory") 1)')
-        heap_line = None
-        for line in RUNTIME_WAT.splitlines():
-            if line.strip() == HEAP_GLOBAL:
-                heap_line = len(self._lines)
-            self.emit(line)
-        self.visit(tree)
-        self._place_heap(memory_line, heap_line)
-        for offset, data in self._data_segments:
-            escaped = "".join(f"\\{b:02x}" for b in data)
-            self.emit(f'(data (i32.const {offset}) "{escaped}")')
-        self._depth -= 1
+        with self.indented():
+            for name, param_type in HOST_FUNCTIONS:
+                self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
+            memory_line = len(self._lines)
+            self.emit('(memory (export "memory") 1)')
+            heap_line = None
+            for line in RUNTIME_WAT.splitlines():
+                if line.strip() == HEAP_GLOBAL:
+                    heap_line = len(self._lines)
+                self.emit(line)
+            self.visit(tree)
+            self._place_heap(memory_line, heap_line)
+            for offset, data in self._data_segments:
+                escaped = "".join(f"\\{b:02x}" for b in data)
+                self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self.emit(")")
         return "\n".join(self._lines) + "\n"
 
@@ -219,11 +233,10 @@ class Emitter(
         if sig.ret != UNIT:
             header += f" (result {wasm_type(sig.ret)})"
         self.emit(header)
-        self._depth += 1
-        for lname, ltype in self.fn.locals.items():
-            self.emit(f"(local {lname} {ltype})")
+        with self.indented():
+            for lname, ltype in self.fn.locals.items():
+                self.emit(f"(local {lname} {ltype})")
         self._lines.extend(body)
-        self._depth -= 1
         self.emit(")")
         self._fn = None
 

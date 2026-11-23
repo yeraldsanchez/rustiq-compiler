@@ -32,7 +32,7 @@ class StructsGenMixin:
 
     def alloc_slots(self, count: int) -> str:
         """Reserva `count` ranuras y deja el puntero en un local temporal nuevo."""
-        pointer = self.new_temp(StructT("_"))
+        pointer = self.new_pointer_temp()
         self.emit(f"i32.const {slot_offset(count)}")
         self.emit("call $alloc")
         self.emit(f"local.set {pointer}")

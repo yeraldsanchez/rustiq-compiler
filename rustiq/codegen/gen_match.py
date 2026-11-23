@@ -45,18 +45,16 @@ class MatchGenMixin:
         exit_label = self.new_label("fin_match")
         result_part = f" (result {wasm_type(result)})" if result != UNIT else ""
         self.emit(f"block {exit_label}{result_part}")
-        self._depth += 1
-        for arm in ctx.matchArm():
-            next_arm = self.new_label("sig_brazo")
-            self.emit(f"block {next_arm}")
-            self._depth += 1
-            self.gen_pattern(arm.pattern(), value, next_arm)
-            self.visit(arm.expression())
-            self.emit(f"br {exit_label}")
-            self._depth -= 1
-            self.emit("end")
-        self.emit("unreachable")
-        self._depth -= 1
+        with self.indented():
+            for arm in ctx.matchArm():
+                next_arm = self.new_label("sig_brazo")
+                self.emit(f"block {next_arm}")
+                with self.indented():
+                    self.gen_pattern(arm.pattern(), value, next_arm)
+                    self.visit(arm.expression())
+                    self.emit(f"br {exit_label}")
+                self.emit("end")
+            self.emit("unreachable")
         self.emit("end")
 
     # --- Patrones ---------------------------------------------------------------

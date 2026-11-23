@@ -12,7 +12,7 @@ from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.check_exprs import operators
 from rustiq.tree import place_accessors
-from rustiq.types import F64, StructT, Type, is_scalar
+from rustiq.types import F64, Type, is_scalar
 
 # Instrucción de cada operador binario según el tipo de los operandos.
 BINARY_I32 = {
@@ -126,7 +126,7 @@ class ExprsGenMixin:
 
     def _emit_temporary_cell(self, operand) -> None:
         """`&5` o `&f()`: guarda el valor en una celda nueva y deja su dirección."""
-        cell = self.new_temp(StructT("_"))
+        cell = self.new_pointer_temp()
         self.emit(f"i32.const {SLOT_SIZE}")
         self.emit("call $alloc")
         self.emit(f"local.tee {cell}")
@@ -176,13 +176,11 @@ class ExprsGenMixin:
         self.visit(operands[0])
         for operand in operands[1:]:
             self.emit("if (result i32)")
-            self._depth += 1
-            self._emit_or_visit(on_true, operand)
-            self._depth -= 1
+            with self.indented():
+                self._emit_or_visit(on_true, operand)
             self.emit("else")
-            self._depth += 1
-            self._emit_or_visit(on_false, operand)
-            self._depth -= 1
+            with self.indented():
+                self._emit_or_visit(on_false, operand)
             self.emit("end")
 
     def _emit_or_visit(self, constant: str | None, operand) -> None:
@@ -223,7 +221,7 @@ class ExprsGenMixin:
                 self.emit("i32.load")  # una ranura intermedia guarda un puntero
         wt = wasm_type(owner)
         if op != "=":  # la dirección se usa dos veces: leer el valor anterior y guardar
-            address = self.new_temp(StructT("_"))
+            address = self.new_pointer_temp()
             self.emit(f"local.tee {address}")
             self.emit(f"local.get {address}")
             self.emit(f"{wt}.load")

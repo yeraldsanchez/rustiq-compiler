@@ -11,7 +11,7 @@ se sale.
 from rustiq.codegen.gen_structs import SLOT_SIZE
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQParser import RustiQParser
-from rustiq.types import I32, ArrayT, RefT, StructT, Type
+from rustiq.types import I32, ArrayT, RefT, Type
 
 
 def array_of(operand: Type) -> ArrayT:
@@ -37,7 +37,7 @@ class ArraysGenMixin:
 
     def emit_element_address(self, index, size: int) -> None:
         """Con el puntero del array en la pila, deja la dirección de `array[index]`."""
-        base = self.new_temp(StructT("_"))
+        base = self.new_pointer_temp()
         position = self.new_temp(I32)
         self.emit(f"local.set {base}")
         self.visit(index)
@@ -47,9 +47,8 @@ class ArraysGenMixin:
         self.emit(f"i32.const {size}")
         self.emit("i32.ge_u")
         self.emit("if")
-        self._depth += 1
-        self.emit("unreachable")
-        self._depth -= 1
+        with self.indented():
+            self.emit("unreachable")
         self.emit("end")
         self.emit(f"local.get {base}")
         self.emit(f"local.get {position}")
