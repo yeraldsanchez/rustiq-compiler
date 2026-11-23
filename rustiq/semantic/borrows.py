@@ -20,12 +20,11 @@ de cualquier argumento), los brazos de un `match` y el valor final de un bloque.
 
 from dataclasses import dataclass
 
-from antlr4 import ParserRuleContext
-
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
 from rustiq.semantic.moves import moved_identifier
+from rustiq.tree import unwrap
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
 
@@ -223,34 +222,22 @@ def borrowed_roots(analyzer, expression) -> list:
 def _call_of(expression):
     """(callee, sufijo) si la expresión es solo `nombre(args)`, si no None."""
     node = expression
-    while True:
-        if isinstance(node, P.PostfixContext):
+    while node is not None:
+        if isinstance(node, P.PostfixContext) and node.getChildCount() > 1:
             suffixes = node.children[1:]
             primary = node.primary()
             if len(suffixes) == 1 and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
                 return primary, suffixes[0]
-            if suffixes:
-                return None
-            node = primary
-        elif isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif isinstance(node, P.UnaryContext) and node.getChildCount() != 1:
             return None
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+        node = unwrap(node)  # `-x`, `!x`, `&x` tienen dos hijos: aquí terminan en None
+    return None
 
 
 def borrowed_operand(expression):
     """El `postfix` de `&x...` si la expresión es solo eso (con o sin paréntesis), si no None."""
     node = expression
-    while True:
+    while node is not None:
         if isinstance(node, P.UnaryContext) and node.AMP() is not None:
             return node.postfix()
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+        node = unwrap(node)
+    return None

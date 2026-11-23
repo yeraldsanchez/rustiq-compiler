@@ -26,10 +26,9 @@ Los operandos de una misma expresión (argumentos, campos, elementos) se mueven
 uno por uno al visitarlos (`visit_and_consume`), así `f(s, s)` es error.
 """
 
-from antlr4 import ParserRuleContext
-
 from rustiq.errors import E_MOVE_OUT_OF_PLACE, E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.tree import unwrap
 from rustiq.types import RefT, is_copy
 
 # Estados de un símbolo
@@ -173,28 +172,14 @@ def borrowed_place(node):
 
     Una llamada (`f().campo` incluida) produce un temporal propio y no cuenta.
     """
-    while True:
-        if isinstance(node, P.UnaryContext):
-            if node.STAR() is not None:
-                return node
-            if node.getChildCount() != 1:
-                return None  # `-x`, `!x`, `&x`
-            node = node.postfix()
-            continue
-        if isinstance(node, P.PostfixContext):
-            suffixes = node.children[1:]
-            if not suffixes:
-                node = node.primary()
-                continue
-            if any(isinstance(s, P.CallSuffixContext) for s in suffixes):
-                return None
+    while node is not None:
+        if isinstance(node, P.UnaryContext) and node.STAR() is not None:
             return node
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+        if isinstance(node, P.PostfixContext) and node.getChildCount() > 1:
+            suffixes = node.children[1:]
+            return None if any(isinstance(s, P.CallSuffixContext) for s in suffixes) else node
+        node = unwrap(node)  # `-x`, `!x` y `&x` tienen dos hijos: aquí terminan en None
+    return None
 
 
 def owned_root(place):
@@ -205,11 +190,6 @@ def owned_root(place):
 
 def moved_identifier(node):
     """El `IdentP` si la expresión es solo una variable (con o sin paréntesis), si no None."""
-    while not isinstance(node, P.IdentPContext):
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+    while node is not None and not isinstance(node, P.IdentPContext):
+        node = unwrap(node)
     return node
