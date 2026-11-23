@@ -25,6 +25,8 @@ export interface SymbolHint {
   type: string | null;
   mutable: boolean;
   declaration: boolean;
+  /** Igual en la declaración y en todos los usos del mismo nombre. */
+  id: string;
 }
 
 export interface CompileResponse {

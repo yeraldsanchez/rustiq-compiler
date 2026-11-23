@@ -10,6 +10,8 @@ const COPIED_FEEDBACK_MS = 1200;
 const COPY_LABEL = "Copiar";
 
 let activeTab: Tab = "output";
+// Nombre base de las descargas: el del archivo que se compiló.
+let moduleName = "main";
 let wat: string | null = null;
 let wasm: Uint8Array<ArrayBuffer> | null = null;
 
@@ -66,7 +68,10 @@ export function selectTab(tab: Tab): void {
 }
 
 /** Guarda el resultado de una compilación (o lo borra si falló). */
-export function setModule(newWat: string | null, newWasm: Uint8Array<ArrayBuffer> | null): void {
+export function setModule(newWat: string | null, newWasm: Uint8Array<ArrayBuffer> | null, fileName = "main.rq"): void {
+  moduleName = fileName.replace(/\.[^.]*$/, "") || "main";
+  dom.downloadWatButton.title = `Descargar ${moduleName}.wat`;
+  dom.downloadWasmButton.title = `Descargar ${moduleName}.wasm`;
   wat = newWat;
   wasm = newWasm;
   dom.watHost.hidden = wat === null;
@@ -103,7 +108,7 @@ export function appendNote(text: string, kind: "note" | "trap"): void {
   refreshTools();
 }
 
-function download(data: BlobPart, filename: string, type: string): void {
+export function download(data: BlobPart, filename: string, type: string): void {
   const url = URL.createObjectURL(new Blob([data], { type }));
   const link = document.createElement("a");
   link.href = url;
@@ -126,5 +131,5 @@ async function copyActive(): Promise<void> {
 dom.tabOutput.addEventListener("click", () => selectTab("output"));
 dom.tabWat.addEventListener("click", () => selectTab("wat"));
 dom.copyButton.addEventListener("click", () => void copyActive());
-dom.downloadWatButton.addEventListener("click", () => wat !== null && download(wat, "main.wat", "text/plain"));
-dom.downloadWasmButton.addEventListener("click", () => wasm && download(wasm, "main.wasm", "application/wasm"));
+dom.downloadWatButton.addEventListener("click", () => wat !== null && download(wat, `${moduleName}.wat`, "text/plain"));
+dom.downloadWasmButton.addEventListener("click", () => wasm && download(wasm, `${moduleName}.wasm`, "application/wasm"));

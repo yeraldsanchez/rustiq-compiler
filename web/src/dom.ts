@@ -8,7 +8,7 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 export const dom = {
-  examples: byId<HTMLSelectElement>("examples"),
+  examples: byId<HTMLButtonElement>("examples"),
   compileButton: byId<HTMLButtonElement>("btn-compile"),
   runButton: byId<HTMLButtonElement>("btn-run"),
   stopButton: byId<HTMLButtonElement>("btn-stop"),
@@ -18,6 +18,11 @@ export const dom = {
   retryButton: byId<HTMLButtonElement>("btn-retry"),
 
   editor: byId<HTMLDivElement>("editor"),
+  fileTabs: byId<HTMLDivElement>("file-tabs"),
+  newFileButton: byId<HTMLButtonElement>("btn-new-file"),
+  outlineButton: byId<HTMLButtonElement>("btn-outline"),
+  fileMenuButton: byId<HTMLButtonElement>("btn-file-menu"),
+  fileInput: byId<HTMLInputElement>("file-input"),
   liveButton: byId<HTMLButtonElement>("btn-live"),
   splitX: byId<HTMLDivElement>("split-x"),
   splitY: byId<HTMLDivElement>("split-y"),

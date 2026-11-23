@@ -17,12 +17,10 @@
       </div>
 
       <div class="actions">
-        <label class="field">
-          <span class="field-label">Ejemplo</span>
-          <select class="select" id="examples">
-            <option value="" selected disabled hidden>Elegir…</option>
-          </select>
-        </label>
+        <div class="field">
+          <span class="field-label" id="examples-label">Ejemplos</span>
+          <button class="select" id="examples" type="button" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="examples-label examples" title="Abrir un ejemplo en una pestaña nueva">Abrir…</button>
+        </div>
         <span class="divider" aria-hidden="true"></span>
         <button class="btn" id="btn-compile" title="Compilar (Ctrl+B)">Compilar</button>
         <button class="btn btn-primary" id="btn-run" title="Compilar y ejecutar (Ctrl+Enter)">Ejecutar</button>
@@ -36,9 +34,15 @@
     </div>
 
     <section class="tile editor" aria-label="Editor">
-      <div class="tile-head">
-        <span class="filename">main.rq</span>
+      <div class="tile-head editor-head">
+        <div class="file-strip">
+          <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Archivos abiertos"></div>
+          <button class="file-tab-new" id="btn-new-file" type="button" title="Archivo nuevo" aria-label="Archivo nuevo">+</button>
+        </div>
         <div class="tile-tools">
+          <button class="btn btn-sm" id="btn-outline" type="button" aria-haspopup="dialog" aria-expanded="false" title="Funciones, structs, enums y constantes (Ctrl+Shift+O)">Esquema</button>
+          <button class="btn btn-sm" id="btn-file-menu" type="button" aria-haspopup="dialog" aria-expanded="false" title="Nuevo, abrir, descargar, renombrar y cerrar">Archivo</button>
+          <input type="file" id="file-input" accept=".rq,.rs,.txt,text/plain" hidden>
           <button class="toggle" id="btn-live" aria-pressed="false" title="Compilar al dejar de escribir y marcar los errores">Errores en vivo</button>
           <span class="tile-meta" id="cursor-pos">Ln 1, Col 1</span>
         </div>

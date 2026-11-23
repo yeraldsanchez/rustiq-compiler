@@ -15,12 +15,12 @@ import { rustLanguage } from "@codemirror/lang-rust";
 import { syntaxTree } from "@codemirror/language";
 
 // Deben coincidir con grammar/RustiQ.g4 y rustiq/builtins.py.
-const KEYWORDS = [
+export const KEYWORDS = [
   "fn", "struct", "enum", "const", "let", "mut", "return", "break",
   "continue", "while", "loop", "if", "else", "match", "true", "false",
 ];
-const TYPES = ["i32", "f64", "bool", "char", "String"];
-const HOST_FUNCTIONS: [name: string, param: string][] = [
+export const TYPES = ["i32", "f64", "bool", "char", "String"];
+export const HOST_FUNCTIONS: [name: string, param: string][] = [
   ["print_i32", "i32"],
   ["print_f64", "f64"],
   ["print_bool", "bool"],
