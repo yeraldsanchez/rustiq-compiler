@@ -11,7 +11,7 @@ from rustiq.generated.RustiQParser import RustiQParser as P
 ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
 
 # Los literales viven desde la dirección 0. El heap empieza después de ellos
-# (en 1024 o más allá si no caben; ver Emitter._place_heap).
+# (en 1024 o más allá si no caben; ver Emitter._heap_start).
 
 
 def unescape(raw_literal: str) -> str:

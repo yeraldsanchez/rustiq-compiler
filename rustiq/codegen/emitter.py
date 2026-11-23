@@ -29,12 +29,18 @@ INDENT = "  "
 CELL_SIZE = 8  # una celda guarda un escalar (i32 o f64)
 PAGE_SIZE = 65536
 HEAP_ALIGN = 8
-# Línea del runtime que fija el inicio del heap; se reescribe si los literales no caben.
-HEAP_GLOBAL = "(global $heap (mut i32) (i32.const 1024))"
 DEFAULT_HEAP_START = 1024
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
+# Línea del runtime que fija el inicio del heap. Trae el valor por defecto, así
+# runtime.wat también sirve solo (tests/test_runtime.py).
+HEAP_GLOBAL = f"(global $heap (mut i32) (i32.const {DEFAULT_HEAP_START}))"
+assert RUNTIME_WAT.count(HEAP_GLOBAL) == 1, "runtime.wat debe declarar la global $heap una vez"
+
+
+def ceil_div(a: int, b: int) -> int:
+    return -(-a // b)
 
 @dataclass
 class FunctionCtx:
@@ -159,38 +165,35 @@ class Emitter(
     # --- Módulo -------------------------------------------------------------
 
     def generate(self, tree) -> str:
-        """Devuelve el módulo WAT completo."""
+        """Devuelve el módulo WAT completo.
+
+        Las funciones se emiten primero, aparte: hasta recorrerlas no se conocen los
+        literales de String, y de ellos depende dónde empieza el heap.
+        """
         self._reset()
+        with self.indented():
+            self.visit(tree)
+        functions, self._lines = self._lines, []
+        heap_start = self._heap_start()
+
         self.emit("(module")
         with self.indented():
             for name, param_type in HOST_FUNCTIONS:
                 self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
-            memory_line = len(self._lines)
-            self.emit('(memory (export "memory") 1)')
-            heap_line = None
-            for line in RUNTIME_WAT.splitlines():
-                if line.strip() == HEAP_GLOBAL:
-                    heap_line = len(self._lines)
+            self.emit(f'(memory (export "memory") {ceil_div(heap_start, PAGE_SIZE)})')
+            runtime = RUNTIME_WAT.replace(HEAP_GLOBAL, f"(global $heap (mut i32) (i32.const {heap_start}))")
+            for line in runtime.splitlines():
                 self.emit(line)
-            self.visit(tree)
-            self._place_heap(memory_line, heap_line)
+            self._lines.extend(functions)
             for offset, data in self._data_segments:
                 escaped = "".join(f"\\{b:02x}" for b in data)
                 self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self.emit(")")
         return "\n".join(self._lines) + "\n"
 
-    def _place_heap(self, memory_line: int, heap_line: int | None) -> None:
-        """El heap empieza después de los literales: en 1024 o más allá si no caben."""
-        aligned = -(-self._data_offset // HEAP_ALIGN) * HEAP_ALIGN
-        heap_start = max(DEFAULT_HEAP_START, aligned)
-        if heap_start == DEFAULT_HEAP_START:
-            return
-        assert heap_line is not None, "runtime.wat sin la global $heap"
-        pages = -(-heap_start // PAGE_SIZE)
-        indent = INDENT * self._depth
-        self._lines[memory_line] = f'{indent}(memory (export "memory") {pages})'
-        self._lines[heap_line] = f"{indent}(global $heap (mut i32) (i32.const {heap_start}))"
+    def _heap_start(self) -> int:
+        """El heap empieza después de los literales: en 1024 o más allá (alineado) si no caben."""
+        return max(DEFAULT_HEAP_START, ceil_div(self._data_offset, HEAP_ALIGN) * HEAP_ALIGN)
 
     def visitProgram(self, ctx: P.ProgramContext):
         for item in ctx.item():
