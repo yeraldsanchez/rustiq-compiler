@@ -5,7 +5,6 @@ import { compileSource, ConnectionError, decodeBase64 } from "./api";
 import { dom } from "./dom";
 import { createEditor } from "./editor/editor";
 import type { Reference } from "./editor/navigation";
-import type { OutlineKind } from "./editor/outline";
 import { EXAMPLE_GROUPS, findExample, type Example } from "./examples";
 import {
   activeFile,
@@ -13,10 +12,11 @@ import {
   allFiles,
   EXTENSION,
   findByName,
-  findFile,
   initFiles,
   onFilesChange,
+  recentlyClosed,
   removeFile,
+  reopenFile,
   setActive,
   updateSource,
 } from "./files";
@@ -28,14 +28,18 @@ import { initFileTabs, renameActiveTab, renderFileTabs } from "./ui/fileTabs";
 import { openInlinePrompt } from "./ui/inlinePrompt";
 import { initLiveErrors, type LiveErrors } from "./ui/liveToggle";
 import { appendNote, clearOutput, download, printLine, selectTab, setModule, showOutputMessage } from "./ui/output";
-import { openPicker, togglePicker, type PickerGroup } from "./ui/picker";
+import { exampleGroups, fileGroups, outlineGroups, shortcutGroups } from "./ui/panelContent";
+import { openPicker, togglePicker } from "./ui/picker";
+import { initSidePanel, openPanel, refreshPanel, togglePanel } from "./ui/sidePanel";
 import { initSplitters } from "./ui/splitters";
 import { errorCountLabel, setCompileTime, setModuleSize, setState } from "./ui/status";
 import { showToast } from "./ui/toast";
+import { initWelcome, showWelcome } from "./ui/welcome";
 
 const DEFAULT_EXAMPLE = "hola_mundo.rq";
 const EMPTY_PROGRAM = "fn main() {\n}\n";
 const MAX_OPEN_BYTES = 100_000;
+const OUTLINE_REFRESH_MS = 250;
 
 const runner = new Runner();
 // Compilaciones visibles en curso (las de Compilar y Ejecutar). Las de los
@@ -45,6 +49,7 @@ let visibleCompiles = 0;
 // por si llegan desordenadas.
 let latestRequest = 0;
 let live: LiveErrors | null = null;
+let outlineTimer: number | undefined;
 // Los errores de la última compilación de cada archivo, para volver a
 // mostrarlos al cambiar de pestaña.
 const errorsByFile = new Map<string, CompileError[]>();
@@ -53,15 +58,19 @@ initFiles(() => ({ name: DEFAULT_EXAMPLE, source: findExample(DEFAULT_EXAMPLE)?.
 
 const editor = createEditor(dom.editor, {
   onChange(source) {
-    updateSource(activeFile().id, source);
+    const file = activeFile();
+    if (file) updateSource(file.id, source);
     live?.notifyChange();
+    // El esquema sigue al texto mientras su panel está abierto.
+    window.clearTimeout(outlineTimer);
+    outlineTimer = window.setTimeout(() => refreshPanel("outline"), OUTLINE_REFRESH_MS);
   },
   onCursor(line, column) {
     dom.cursorPos.textContent = `Ln ${line}, Col ${column}`;
   },
   onCompile: () => void compile(),
   onRun: () => void compileAndRun(),
-  onOutline: () => showOutline(),
+  onOutline: () => openPanel("outline", true),
   async refreshSymbols() {
     await compile({ quiet: true });
   },
@@ -80,8 +89,10 @@ const errorHandlers: ErrorListHandlers = {
 
 function updateButtons(): void {
   const busy = visibleCompiles > 0 || runner.running;
-  dom.compileButton.disabled = busy;
-  dom.runButton.disabled = busy;
+  // Sin archivos abiertos no hay nada que compilar.
+  const idle = busy || activeFile() === null;
+  dom.compileButton.disabled = idle;
+  dom.runButton.disabled = idle;
   dom.stopButton.disabled = !runner.running;
 }
 
@@ -93,6 +104,7 @@ async function compile({ quiet = false } = {}): Promise<CompileResponse | null> 
   const request = ++latestRequest;
   // Si se cambia de pestaña mientras compila, la respuesta ya no aplica.
   const file = activeFile();
+  if (!file) return null;
   if (!quiet) {
     visibleCompiles += 1;
     updateButtons();
@@ -102,7 +114,7 @@ async function compile({ quiet = false } = {}): Promise<CompileResponse | null> 
 
   try {
     const result = await compileSource(editor.getSource());
-    if (request !== latestRequest || activeFile().id !== file.id) return null;
+    if (request !== latestRequest || activeFile()?.id !== file.id) return null;
     hideBanner();
     showCompileResult(result, performance.now() - started, file.id, file.name);
     return result;
@@ -182,15 +194,24 @@ function showRunResult(result: RunResult): void {
 
 // --- Archivos --------------------------------------------------------------
 
-/** Muestra en el editor el archivo activo, con sus últimos errores. */
+/** Muestra el archivo activo con sus últimos errores, o el inicio si no
+ *  queda ninguno abierto. */
 function showActiveFile(): void {
-  // Al cerrar el último archivo hay un instante sin ninguno; closeFile crea
-  // uno nuevo enseguida.
-  if (!allFiles().length) return;
   const file = activeFile();
+  renderFileTabs();
+  showWelcome(file === null, recentlyClosed());
+  refreshPanel();
+  updateButtons();
+  if (!file) {
+    // Sin archivos, los indicadores de la última compilación ya no aplican.
+    renderErrors([], errorHandlers);
+    setCompileTime(null);
+    setModuleSize(null);
+    if (!runner.running) setState("Listo", "empty");
+    return;
+  }
   editor.open(file.id, file.source);
   renderErrors(errorsByFile.get(file.id) ?? [], errorHandlers);
-  renderFileTabs();
   live?.notifyChange();
 }
 
@@ -200,33 +221,21 @@ function createFile(name = `nuevo${EXTENSION}`, source = EMPTY_PROGRAM): void {
 }
 
 function closeFile(id: string): void {
-  const removed = removeFile(id);
-  if (!removed) return;
-  const { file, index } = removed;
+  const file = removeFile(id);
+  if (!file) return;
   editor.forget(id);
   errorsByFile.delete(id);
-  // Nunca queda el editor sin archivos.
-  if (!allFiles().length) addFile(`main${EXTENSION}`, EMPTY_PROGRAM);
-  showToast(`Se cerró ${file.name}.`, {
-    label: "Deshacer",
-    run: () => {
-      // Si solo quedó el archivo vacío que se creó al cerrar, se reemplaza.
-      const [only] = allFiles();
-      const placeholder = allFiles().length === 1 && only.source === EMPTY_PROGRAM ? only.id : null;
-      addFile(file.name, file.source, index, file.id);
-      if (placeholder) {
-        removeFile(placeholder);
-        editor.forget(placeholder);
-      }
-    },
-  });
+  showToast(`Se cerró ${file.name}.`, { label: "Deshacer", run: () => reopen(id) });
+}
+
+function reopen(id: string): void {
+  if (reopenFile(id)) editor.focus();
 }
 
 function openExample(example: Example): void {
   const existing = findByName(example.name);
   if (existing && existing.source === example.source) setActive(existing.id);
   else addFile(example.name, example.source);
-  editor.focus();
 }
 
 function openFromDisk(): void {
@@ -248,93 +257,36 @@ dom.fileInput.addEventListener("change", async () => {
 
 function downloadActive(): void {
   const file = activeFile();
-  download(editor.getSource(), file.name, "text/plain");
-}
-
-function showFileMenu(): void {
-  const file = activeFile();
-  openPicker({
-    anchor: dom.fileMenuButton,
-    label: "Archivo",
-    width: 260,
-    groups: [
-      {
-        items: [
-          { title: "Archivo nuevo", meta: "+", onSelect: () => createFile() },
-          { title: "Abrir desde el disco…", meta: ".rq", onSelect: openFromDisk },
-          { title: `Descargar ${file.name}`, onSelect: downloadActive },
-        ],
-      },
-      {
-        items: [
-          { title: "Renombrar", meta: "F2 en la pestaña", onSelect: renameActiveTab },
-          { title: `Cerrar ${file.name}`, onSelect: () => closeFile(file.id) },
-        ],
-      },
-    ],
-  });
+  if (file) download(editor.getSource(), file.name, "text/plain");
 }
 
 onFilesChange(showActiveFile);
 
-// --- Ejemplos --------------------------------------------------------------
+// --- Panel lateral, referencias y atajos -----------------------------------
 
-function showExamples(): void {
-  const groups: PickerGroup[] = EXAMPLE_GROUPS.filter((g) => g.examples.length).map((group) => ({
-    label: group.label,
-    items: group.examples.map((example) => ({
-      title: example.title,
-      detail: example.description || undefined,
-      meta: example.errorCode,
-      metaTone: example.errorCode ? "error" : undefined,
-      keywords: example.name,
-      current: findFile(activeFile().id)?.name === example.name,
-      onSelect: () => openExample(example),
-    })),
-  }));
-  openPicker({
-    anchor: dom.examples,
-    label: "Ejemplos",
-    groups,
-    search: true,
-    width: 440,
-    placeholder: "Buscar un ejemplo o un código de error…",
-    empty: "Ningún ejemplo coincide.",
-  });
-}
-
-// --- Esquema y referencias -------------------------------------------------
-
-const OUTLINE_GROUPS: [OutlineKind, string][] = [
-  ["func", "Funciones"],
-  ["struct", "Structs"],
-  ["enum", "Enums"],
-  ["const", "Constantes"],
-];
-
-function showOutline(): void {
-  const items = editor.outline();
-  openPicker({
-    anchor: dom.outlineButton,
-    label: "Esquema del programa",
-    search: true,
-    code: true,
-    width: 420,
-    placeholder: "Ir a una función, struct, enum o constante…",
-    empty: items.length ? "Nada coincide." : "Este archivo todavía no declara nada.",
-    groups: OUTLINE_GROUPS.map(([kind, label]) => ({
-      label,
-      items: items
-        .filter((item) => item.kind === kind)
-        .map((item) => ({
-          title: item.name,
-          detail: item.detail,
-          meta: `${item.line}`,
-          onSelect: () => editor.select(item),
-        })),
-    })),
-  });
-}
+initSidePanel(
+  {
+    files: {
+      groups: () =>
+        fileGroups(allFiles(), activeFile(), {
+          select: setActive,
+          close: closeFile,
+          download: downloadActive,
+          rename: renameActiveTab,
+        }),
+      empty: () => "Ningún archivo abierto.",
+    },
+    outline: {
+      groups: () => (activeFile() ? outlineGroups(editor.outline(), (item) => editor.select(item)) : []),
+      empty: () => (activeFile() ? "Este archivo todavía no declara nada." : "Abre un archivo para ver su esquema."),
+    },
+    examples: {
+      groups: () => exampleGroups(EXAMPLE_GROUPS, activeFile()?.name ?? null, openExample),
+      empty: () => "Ningún ejemplo coincide.",
+    },
+  },
+  () => editor.focus(),
+);
 
 function showReferences(name: string, references: Reference[], anchor: DOMRect): void {
   const count = references.length === 1 ? "1 aparición" : `${references.length} apariciones`;
@@ -358,27 +310,42 @@ function showReferences(name: string, references: Reference[], anchor: DOMRect):
   });
 }
 
+function showShortcuts(): void {
+  openPicker({ anchor: dom.railKeys, side: "right", label: "Atajos de teclado", width: 340, groups: shortcutGroups() });
+}
+
 // --- Botones y atajos ------------------------------------------------------
 
-dom.examples.addEventListener("click", () => togglePicker(dom.examples, showExamples));
-dom.outlineButton.addEventListener("click", () => togglePicker(dom.outlineButton, showOutline));
-dom.fileMenuButton.addEventListener("click", () => togglePicker(dom.fileMenuButton, showFileMenu));
+dom.railKeys.addEventListener("click", () => togglePicker(dom.railKeys, showShortcuts));
+dom.sideNewButton.addEventListener("click", () => createFile());
+dom.sideOpenButton.addEventListener("click", openFromDisk);
 dom.compileButton.addEventListener("click", () => void compile());
 dom.runButton.addEventListener("click", () => void compileAndRun());
 dom.stopButton.addEventListener("click", () => runner.stop());
 
 // Los atajos también funcionan con el foco fuera del editor.
 document.addEventListener("keydown", (event) => {
-  if (!(event.ctrlKey || event.metaKey) || event.defaultPrevented) return;
-  if (event.key === "Enter") {
-    event.preventDefault();
-    void compileAndRun();
-  } else if (event.key.toLowerCase() === "b") {
-    event.preventDefault();
-    void compile();
-  }
+  if (event.defaultPrevented) return;
+  const mod = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
+  let handled = true;
+  if (mod && !event.shiftKey && key === "enter") void compileAndRun();
+  else if (mod && !event.shiftKey && key === "b") void compile();
+  else if (mod && !event.shiftKey && key === "o") openFromDisk();
+  else if (mod && event.shiftKey && key === "e") togglePanel("files");
+  else if (mod && event.shiftKey && key === "o") openPanel("outline", true);
+  // Ctrl+N lo reserva el navegador para una ventana nueva.
+  else if (event.altKey && !mod && key === "n") createFile();
+  else handled = false;
+  if (handled) event.preventDefault();
 });
 
+initWelcome({
+  create: () => createFile(),
+  openFromDisk,
+  openExamples: () => openPanel("examples", true),
+  reopen,
+});
 initFileTabs({ select: setActive, close: closeFile, create: () => createFile() });
 showActiveFile();
 initSplitters();

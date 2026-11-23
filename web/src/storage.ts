@@ -7,6 +7,7 @@ export const KEYS = {
   source: "rustiq.source",
   files: "rustiq.files",
   activeFile: "rustiq.activeFile",
+  closedFiles: "rustiq.closedFiles",
   liveErrors: "rustiq.liveErrors",
   layout: "rustiq.layout",
 } as const;

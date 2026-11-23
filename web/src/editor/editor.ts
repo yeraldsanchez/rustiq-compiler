@@ -136,6 +136,7 @@ export function createEditor(parent: HTMLElement, callbacks: EditorCallbacks): E
 
     forget(id) {
       documents.delete(id);
+      if (activeId === id) activeId = null;
     },
 
     getSource: () => view.state.doc.toString(),

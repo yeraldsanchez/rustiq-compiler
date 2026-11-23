@@ -122,7 +122,7 @@ function onTabKey(event: KeyboardEvent, tab: HTMLElement, file: SourceFile): voi
 
 export function renderFileTabs(): void {
   if (renaming) return;
-  const active = activeFile().id;
+  const active = activeFile()?.id;
   const tabs = allFiles().map((file) => tabElement(file, file.id === active));
   dom.fileTabs.replaceChildren(...tabs);
   dom.fileTabs.querySelector(".is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -131,6 +131,7 @@ export function renderFileTabs(): void {
 /** Renombrar el archivo activo desde el menú. */
 export function renameActiveTab(): void {
   const file = activeFile();
+  if (!file) return;
   const tab = dom.fileTabs.querySelector<HTMLElement>(`[data-id="${file.id}"]`);
   if (tab) startRename(tab, file);
 }

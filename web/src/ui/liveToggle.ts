@@ -1,5 +1,7 @@
-/** Botón de errores en vivo: compila tras una pausa al escribir y marca los
- *  errores sin tocar la salida. La preferencia se recuerda. */
+/** Errores en vivo: compila tras una pausa al escribir y marca los errores
+ *  sin tocar la salida. Se activa desde el riel (botón con un punto verde
+ *  cuando está encendido) o desde el interruptor del panel lateral. La
+ *  preferencia se recuerda. */
 
 import { dom } from "../dom";
 import { KEYS, load, save } from "../storage";
@@ -15,15 +17,21 @@ export function initLiveErrors(check: () => void): LiveErrors {
   let enabled = load(KEYS.liveErrors) === "1";
   let timer: number | undefined;
 
-  const render = () => dom.liveButton.setAttribute("aria-pressed", String(enabled));
+  const render = () => {
+    dom.railLive.setAttribute("aria-pressed", String(enabled));
+    dom.railLive.title = `Errores en vivo: ${enabled ? "encendido" : "apagado"}`;
+    dom.liveSwitch.setAttribute("aria-checked", String(enabled));
+  };
 
-  dom.liveButton.addEventListener("click", () => {
+  const toggle = () => {
     enabled = !enabled;
     save(KEYS.liveErrors, enabled ? "1" : "0");
     render();
     window.clearTimeout(timer);
     if (enabled) check();
-  });
+  };
+  dom.railLive.addEventListener("click", toggle);
+  dom.liveSwitch.addEventListener("click", toggle);
 
   render();
   if (enabled) check();

@@ -1,5 +1,6 @@
 /** Separadores para cambiar el ancho del editor y el reparto de alto entre
- *  la salida y los errores. Escriben variables CSS en `.app` (ver la grilla
+ *  la salida y los errores. El ancho del editor es la fracción del espacio a
+ *  la derecha del riel y del panel lateral, así que no cambia al abrirlo. Escriben variables CSS en `.app` (ver la grilla
  *  en styles.css) y recuerdan el reparto entre visitas. */
 
 import { dom } from "../dom";
@@ -17,6 +18,7 @@ const EDITOR_RANGE = [0.3, 0.78] as const;
 const OUTPUT_RANGE = [0.2, 0.85] as const;
 
 const app = document.querySelector<HTMLElement>(".app")!;
+const editorTile = document.querySelector<HTMLElement>(".editor")!;
 const outputTile = document.querySelector<HTMLElement>(".output")!;
 const errorsTile = document.querySelector<HTMLElement>(".errors")!;
 
@@ -39,7 +41,10 @@ function loadLayout(): Layout {
 }
 
 function apply(): void {
-  app.style.setProperty("--editor-width", `${(layout.editor * 100).toFixed(2)}%`);
+  // En fr: el editor y las 5 columnas de la derecha se reparten lo que dejan
+  // el riel y el panel.
+  app.style.setProperty("--editor-fr", `${layout.editor.toFixed(3)}fr`);
+  app.style.setProperty("--right-fr", `${((1 - layout.editor) / 5).toFixed(4)}fr`);
   app.style.setProperty("--output-fr", `${layout.output.toFixed(3)}fr`);
   app.style.setProperty("--errors-fr", `${(1 - layout.output).toFixed(3)}fr`);
 }
@@ -86,10 +91,9 @@ export function initSplitters(): void {
   makeDraggable(
     dom.splitX,
     (event) => {
-      const box = app.getBoundingClientRect();
-      const padding = parseFloat(getComputedStyle(app).paddingLeft);
-      const width = box.width - padding * 2;
-      layout.editor = clamp((event.clientX - box.left - padding) / width, EDITOR_RANGE);
+      const left = editorTile.getBoundingClientRect().left;
+      const right = app.getBoundingClientRect().right - parseFloat(getComputedStyle(app).paddingRight);
+      layout.editor = clamp((event.clientX - left) / (right - left), EDITOR_RANGE);
     },
     () => (layout.editor = DEFAULT_LAYOUT.editor),
   );
