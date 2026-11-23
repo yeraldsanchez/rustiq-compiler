@@ -84,3 +84,17 @@ def test_locales_y_etiquetas():
     assert emitter.new_label("block") == "$block2"
     assert emitter.new_temp(F64) == "$tmp1"
     assert emitter.fn.locals == {"$tmp1": "f64"}
+
+
+def test_heap_por_defecto_en_1024():
+    wat = _wat('fn main() { let s = "hola"; }')
+    assert '(memory (export "memory") 1)' in wat
+    assert "(global $heap (mut i32) (i32.const 1024))" in wat
+
+
+def test_literales_grandes_mueven_el_heap_y_agrandan_la_memoria():
+    # Los literales ocupan 70001 bytes desde la dirección 0; alineado a 8, el heap empieza en 70008
+    wat = _wat('fn main() { let s = "' + "a" * 70001 + '"; }')
+    assert '(memory (export "memory") 2)' in wat
+    assert "(global $heap (mut i32) (i32.const 70008))" in wat
+    assemble(wat)
