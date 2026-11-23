@@ -19,9 +19,8 @@ from rustiq.semantic.check_items import ItemsMixin
 from rustiq.semantic.check_match import MatchMixin
 from rustiq.semantic.check_refs import RefsMixin
 from rustiq.semantic.check_structs import StructsMixin
-from rustiq.semantic.info import SemanticInfo
+from rustiq.semantic.info import SemanticInfo, Symbol
 from rustiq.semantic.moves import MovesMixin
-from rustiq.semantic.scope_defaults import ScopeDefaults
 from rustiq.semantic.scopes import ScopesMixin
 from rustiq.tree import split_call
 from rustiq.types import UNIT, Type
@@ -31,7 +30,6 @@ class Analyzer(
     ItemsMixin, StructsMixin, ControlMixin, MatchMixin, MovesMixin,  # A
     ScopesMixin, ExprsMixin, ArraysMixin, RefsMixin,  # B
     BorrowsMixin, AssignMixin,  # B; AssignMixin va después: BorrowsMixin lo llama con super()
-    ScopeDefaults,  # respaldo del contrato de ámbitos; ScopesMixin lo reemplaza
     RustiQVisitor,
 ):
     def __init__(self) -> None:
@@ -43,8 +41,9 @@ class Analyzer(
         self.move_states: dict[int, str] = {}  # uid -> estado (moves.py)
         self.move_loop_depth: dict[int, int] = {}  # uid -> ciclos abiertos al declararlo
         self.moved_in_branches: list[set[int]] = []  # uids movidos en cada if/match abierto
-        # Initialize borrow tracking
-        BorrowsMixin.__init__(self)
+        self._scopes: list[dict[str, Symbol]] = []  # ámbitos abiertos, el último es el actual (scopes.py)
+        self._next_uid = 0  # uid del próximo símbolo declarado
+        BorrowsMixin.__init__(self)  # préstamos activos (borrows.py)
 
     def analyze(self, tree) -> tuple[SemanticInfo, list[CompileError]]:
         self.visit(tree)

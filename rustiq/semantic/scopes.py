@@ -14,18 +14,15 @@ def _is_borrow_operand(ident) -> bool:
 
 
 class ScopesMixin:
-    def _scopes_list(self) -> list[dict[str, Symbol]]:
-        return self.__dict__.setdefault("_scopes", [])
-
     def push_scope(self) -> None:
-        self._scopes_list().append({})
+        self._scopes.append({})
 
     def pop_scope(self) -> None:
         self.release_scope_borrows()
-        self._scopes_list().pop()
+        self._scopes.pop()
 
     def _is_redeclared_in_current_or_params(self, name: str) -> bool:
-        scopes = self._scopes_list()
+        scopes = self._scopes
         if not scopes:
             return False
         if name in scopes[-1]:
@@ -39,7 +36,7 @@ class ScopesMixin:
         return False
 
     def declare(self, name: str, type: Type, mutable: bool, kind: str, node) -> Symbol | None:
-        scopes = self._scopes_list()
+        scopes = self._scopes
         if not scopes:
             self.push_scope()
         current = scopes[-1]
@@ -50,14 +47,14 @@ class ScopesMixin:
             self.error(node, E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
             return None
 
-        uid = self.__dict__.get("_next_uid", 0)
-        self._next_uid = uid + 1
+        uid = self._next_uid
+        self._next_uid += 1
         symbol = Symbol(uid=uid, name=name, type=type, mutable=mutable, kind=kind)
         current[name] = symbol
         return symbol
 
     def lookup(self, name: str) -> Symbol | None:
-        for scope in reversed(self._scopes_list()):
+        for scope in reversed(self._scopes):
             if name in scope:
                 return scope[name]
         return None

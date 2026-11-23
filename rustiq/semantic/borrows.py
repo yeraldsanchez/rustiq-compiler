@@ -63,7 +63,7 @@ class BorrowsMixin:
         self._add_borrow(symbol, mutable=True)
 
     def _add_borrow(self, symbol, mutable: bool) -> None:
-        depth = len(self._scopes_list())
+        depth = len(self._scopes)
         self._active_borrows.append(_BorrowEntry(symbol.uid, mutable, depth))
 
     # --- Vida ------------------------------------------------------------------
@@ -80,14 +80,14 @@ class BorrowsMixin:
 
     def keep_borrows(self, mark: int, depth: int | None = None) -> None:
         """Los préstamos creados desde `mark` viven hasta el fin del ámbito `depth` (o el actual)."""
-        depth = len(self._scopes_list()) if depth is None else depth
+        depth = len(self._scopes) if depth is None else depth
         for b in self._active_borrows[mark:]:
             b.temporary = False
             b.depth = depth
 
     def release_scope_borrows(self) -> None:
         """Al cerrar un ámbito, suelta los préstamos que vivían en él."""
-        depth = len(self._scopes_list())
+        depth = len(self._scopes)
         self._active_borrows = [b for b in self._active_borrows if b.depth < depth]
 
     def may_hold_ref(self, t, seen=None) -> bool:
@@ -159,7 +159,7 @@ class BorrowsMixin:
 
     def scope_depth(self, symbol) -> int:
         """Cantidad de ámbitos abiertos hasta el que declaró `symbol` (incluido)."""
-        for i, scope in enumerate(self._scopes_list()):
+        for i, scope in enumerate(self._scopes):
             if scope.get(symbol.name) is symbol:
                 return i + 1
         return 0
