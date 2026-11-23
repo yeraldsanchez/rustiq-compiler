@@ -358,7 +358,7 @@ fn main() {
     };
 }
 `,Xb=`// Control de flujo: if/else if/else, while, loop, break y continue.
-// \`if\` es solo sentencia (P4): para devolver un valor se usa return.
+// \`if\` es solo sentencia: para devolver un valor se usa return.
 fn clasificar(n: i32) -> i32 {
     if n < 0 {
         return -1;

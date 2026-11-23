@@ -1,8 +1,8 @@
 # Evidencias de compilación, validación y ejecución
 
-Generado con `python -m scripts.evidencias` el 2026-11-22 18:46.
+Generado con `python -m scripts.evidencias` el 2026-11-22 20:40.
 
-Herramientas: wat2wasm 1.0.42; wasm-validate 1.0.42; Python 3.12.3
+Herramientas: wat2wasm 1.0.42; wasm-validate 1.0.42; Python 3.12.15
 
 ## Programas válidos
 
