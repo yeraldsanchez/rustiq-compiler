@@ -14,6 +14,7 @@ from rustiq.errors import (
 )
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.flow import block_tail
+from rustiq.semantic.info import SymbolKind
 from rustiq.types import BOOL, UNIT, Type
 
 
@@ -120,6 +121,6 @@ class ControlMixin:
             ctx.expression(), E_TYPE_MISMATCH, declared, self.visit(ctx.expression()),
             f"La constante '{name}'",
         )
-        symbol = self.declare(name, declared, False, "const", ctx.IDENT())
+        symbol = self.declare(name, declared, False, SymbolKind.CONST, ctx.IDENT())
         if symbol is not None:
             self.info.symbol.put(ctx, symbol)

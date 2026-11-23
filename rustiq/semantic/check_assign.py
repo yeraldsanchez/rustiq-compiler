@@ -15,11 +15,11 @@ Reglas:
 
 from rustiq.errors import E_ASSIGN_IMMUTABLE, E_BAD_OPERAND, E_TYPE_MISMATCH, E_UNDECLARED, E_UNKNOWN_FIELD
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.info import VARIABLE_KINDS
 from rustiq.semantic.moves import UNINITIALIZED
 from rustiq.tree import place_accessors
 from rustiq.types import F64, I32, RefT, StructT, Type
 
-ASSIGNABLE_KINDS = ("local", "param")
 NUMERIC = (I32, F64)
 
 
@@ -52,7 +52,7 @@ class AssignMixin:
         return None
 
     def _check_mutable(self, symbol, root, replaces_whole: bool) -> None:
-        if symbol.kind not in ASSIGNABLE_KINDS:
+        if symbol.kind not in VARIABLE_KINDS:
             self.error(root, E_ASSIGN_IMMUTABLE, f"No se puede asignar a '{symbol.name}'")
         elif symbol.mutable:
             return

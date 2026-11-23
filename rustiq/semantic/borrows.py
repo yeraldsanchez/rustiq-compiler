@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
+from rustiq.semantic.info import VARIABLE_KINDS
 from rustiq.semantic.moves import moved_identifier
 from rustiq.tree import call_args, split_call, unwrap
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
@@ -136,7 +137,7 @@ class BorrowsMixin:
             return True  # `&5`, `&f()`: un temporal
         if isinstance(symbol.type, RefT) and operand.getChildCount() > 1:
             return symbol.uid in self._local_refs  # `&r.x`: se sigue la referencia r
-        return symbol.kind in ("local", "param")
+        return symbol.kind in VARIABLE_KINDS
 
     def _value_points_to_local(self, expression) -> bool:
         """Sigue llamadas, `match` y bloques: `id(&x)`, `match c { _ => &x }`, `{ &x }`."""
@@ -188,7 +189,7 @@ class BorrowsMixin:
         ref_depth = self.scope_depth(ref_symbol)
         for root in borrowed_roots(self, expression):
             symbol = self.info.symbol.get(root)
-            if symbol is None or symbol.kind not in ("local", "param") or isinstance(symbol.type, RefT):
+            if symbol is None or symbol.kind not in VARIABLE_KINDS or isinstance(symbol.type, RefT):
                 continue
             if self.scope_depth(symbol) > ref_depth:
                 self.error(

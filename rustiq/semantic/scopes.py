@@ -2,7 +2,7 @@
 
 from rustiq.errors import E_BORROW_CONFLICT, E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.info import Symbol
+from rustiq.semantic.info import Symbol, SymbolKind
 from rustiq.types import RefT, Type, UNIT
 
 
@@ -31,11 +31,11 @@ class ScopesMixin:
         # Si estamos en un bloque anidado más adentro, scopes[-2] ya no será exclusivo de parámetros.
         if len(scopes) >= 3:
             parent = scopes[-2]
-            if name in parent and parent[name].kind == "param" and all(s.kind == "param" for s in parent.values()):
+            if name in parent and parent[name].kind == SymbolKind.PARAM and all(s.kind == SymbolKind.PARAM for s in parent.values()):
                 return True
         return False
 
-    def declare(self, name: str, type: Type, mutable: bool, kind: str, node) -> Symbol | None:
+    def declare(self, name: str, type: Type, mutable: bool, kind: SymbolKind, node) -> Symbol | None:
         scopes = self._scopes
         if not scopes:
             self.push_scope()
@@ -96,7 +96,7 @@ class ScopesMixin:
 
         # Se declara aunque el tipo sea None (error previo): así los usos
         # siguientes no reportan E_UNDECLARED en cascada y `mismatch` calla.
-        symbol = self.declare(name, final_type, mutable, "local", ctx.IDENT())
+        symbol = self.declare(name, final_type, mutable, SymbolKind.LOCAL, ctx.IDENT())
         if symbol is None:
             return None
         self.info.symbol.put(ctx, symbol)

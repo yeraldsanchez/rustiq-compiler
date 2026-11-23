@@ -5,6 +5,7 @@ esto y nunca vuelve a inferir tipos.
 """
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
 from rustiq.types import Type
@@ -36,13 +37,30 @@ class NodeProperty(Generic[T]):
         return list(self._values.items())
 
 
+class SymbolKind(StrEnum):
+    """Qué es un nombre. Es un `str`: se compara y se serializa como su texto."""
+
+    LOCAL = "local"
+    PARAM = "param"
+    CONST = "const"
+    FUNC = "func"
+    HOST = "host"  # función del host (`print_*`)
+    STRUCT = "struct"
+    ENUM = "enum"
+    VARIANT = "variant"
+
+
+# Variables dueñas de su valor: se pueden mover, asignar y prestar.
+VARIABLE_KINDS = (SymbolKind.LOCAL, SymbolKind.PARAM)
+
+
 @dataclass
 class Symbol:
     uid: int  # único en todo el programa, resuelve el sombreado
     name: str
     type: Type
     mutable: bool
-    kind: str  # "local" | "param" | "const" | "func"
+    kind: SymbolKind  # LOCAL, PARAM o CONST
     address_taken: bool = False  # True si se le aplica & y es escalar
 
 

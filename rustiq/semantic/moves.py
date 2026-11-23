@@ -28,6 +28,7 @@ uno por uno al visitarlos (`visit_and_consume`), así `f(s, s)` es error.
 
 from rustiq.errors import E_MOVE_OUT_OF_PLACE, E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.semantic.info import VARIABLE_KINDS
 from rustiq.tree import unwrap
 from rustiq.types import RefT, is_copy
 
@@ -37,7 +38,6 @@ MOVED = "moved"
 UNINITIALIZED = "uninitialized"
 
 SEVERITY = {AVAILABLE: 0, UNINITIALIZED: 1, MOVED: 2}  # para unir ramas: gana el peor
-MOVABLE_KINDS = ("local", "param")
 
 
 class MovesMixin:
@@ -99,7 +99,7 @@ class MovesMixin:
 
     def _move_symbol(self, ident, symbol) -> None:
         """Marca `symbol` como movido, salvo que esté prestado o fuera del ciclo."""
-        if symbol.kind not in MOVABLE_KINDS:
+        if symbol.kind not in VARIABLE_KINDS:
             return
         if self.move_state(symbol) != AVAILABLE:
             return  # check_use ya reportó el error

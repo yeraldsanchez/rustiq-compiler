@@ -20,7 +20,7 @@ from rustiq.errors import (
 )
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.flow import block_diverges, block_tail, expression_diverges
-from rustiq.semantic.info import FuncSig
+from rustiq.semantic.info import FuncSig, SymbolKind
 from rustiq.tree import call_args
 from rustiq.types import (
     BOOL,
@@ -77,7 +77,7 @@ class ItemsMixin:
 
     def _declare_global_const(self, decl: RustiQParser.ConstDeclContext) -> None:
         symbol = self.declare(
-            decl.IDENT().getText(), self.resolve_type(decl.type_()), False, "const", decl.IDENT()
+            decl.IDENT().getText(), self.resolve_type(decl.type_()), False, SymbolKind.CONST, decl.IDENT()
         )
         if symbol is not None:
             self.info.symbol.put(decl, symbol)
@@ -126,7 +126,7 @@ class ItemsMixin:
         self.push_scope()
         if ctx.parameterList() is not None:
             for p, (_, ptype) in zip(ctx.parameterList().parameter(), sig.params):
-                symbol = self.declare(p.IDENT().getText(), ptype, p.MUT() is not None, "param", p.IDENT())
+                symbol = self.declare(p.IDENT().getText(), ptype, p.MUT() is not None, SymbolKind.PARAM, p.IDENT())
                 if symbol is not None:
                     self.info.symbol.put(p, symbol)
                     self.track_symbol(symbol)
