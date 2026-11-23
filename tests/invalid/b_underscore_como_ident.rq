@@ -1,0 +1,4 @@
+// ERROR sintactico E_SYNTAX 3:9
+fn main() {
+    let _ = 5;
+}

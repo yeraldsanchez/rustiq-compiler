@@ -1,0 +1,5 @@
+// ERROR sintactico E_SYNTAX 4:15
+fn main() {
+    let t = (1, 2);
+    let x = t.0;
+}
