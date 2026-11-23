@@ -49,3 +49,9 @@ def place_accessors(place: P.PlaceContext):
         else:  # [ expresión ]
             yield None, children[i + 1]
             i += 3
+
+
+def call_args(ctx) -> list:
+    """Las expresiones de la lista de argumentos de `ctx` (una llamada o `Enum::Variante(...)`)."""
+    arguments = ctx.argumentList()
+    return arguments.expression() if arguments is not None else []

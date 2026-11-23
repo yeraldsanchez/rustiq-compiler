@@ -15,6 +15,7 @@ from rustiq.errors import (
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import EnumDef
 from rustiq.semantic.flow import expression_diverges
+from rustiq.tree import call_args
 from rustiq.types import BOOL, UNIT, EnumT, TupleT, Type, is_copy
 
 
@@ -23,7 +24,7 @@ class MatchMixin:
 
     def visitEnumValue(self, ctx: P.EnumValueContext):
         enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
-        args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
+        args = call_args(ctx)
         arg_types = self.visit_and_consume(args)
         payload = self._variant_payload(ctx, enum_name, variant)
         if payload is None:

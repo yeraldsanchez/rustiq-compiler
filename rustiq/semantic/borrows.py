@@ -24,7 +24,7 @@ from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCA
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
 from rustiq.semantic.moves import moved_identifier
-from rustiq.tree import split_call, unwrap
+from rustiq.tree import call_args, split_call, unwrap
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
 
@@ -140,14 +140,10 @@ class BorrowsMixin:
 
     def _value_points_to_local(self, expression) -> bool:
         """Sigue llamadas, `match` y bloques: `id(&x)`, `match c { _ => &x }`, `{ &x }`."""
-        call = _call_of(expression)
-        if call is not None:
-            callee, suffix = call
-            sig = self.info.functions.get(callee.IDENT().getText())
-            if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
-                return False
+        args = ref_call_args(self.info, expression)
+        if args:
             # Sin anotaciones de vida, el resultado puede venir de cualquier argumento.
-            return any(self.points_to_local(arg) for arg in suffix.argumentList().expression())
+            return any(self.points_to_local(arg) for arg in args)
         primary = _bare_primary(expression)
         if isinstance(primary, P.MatchPContext):
             return any(self.points_to_local(arm.expression()) for arm in primary.matchExpr().matchArm())
@@ -209,14 +205,17 @@ def borrowed_roots(analyzer, expression) -> list:
     if operand is not None:
         primary = operand.primary()
         return [primary] if isinstance(primary, P.IdentPContext) else []
+    return [root for arg in ref_call_args(analyzer.info, expression) for root in borrowed_roots(analyzer, arg)]
+
+
+def ref_call_args(info, expression) -> list:
+    """Los argumentos si la expresión es solo `f(args)` y `f` devuelve una referencia; si no, []."""
     call = _call_of(expression)
     if call is None:
         return []
     callee, suffix = call
-    sig = analyzer.info.functions.get(callee.IDENT().getText())
-    if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
-        return []
-    return [root for arg in suffix.argumentList().expression() for root in borrowed_roots(analyzer, arg)]
+    sig = info.functions.get(callee.IDENT().getText())
+    return call_args(suffix) if sig is not None and isinstance(sig.ret, RefT) else []
 
 
 def _call_of(expression):

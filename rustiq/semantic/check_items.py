@@ -21,6 +21,7 @@ from rustiq.errors import (
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.flow import block_diverges, block_tail, expression_diverges
 from rustiq.semantic.info import FuncSig
+from rustiq.tree import call_args
 from rustiq.types import (
     BOOL,
     CHAR,
@@ -168,7 +169,7 @@ class ItemsMixin:
     def check_call(self, callee: RustiQParser.IdentPContext, call: RustiQParser.CallSuffixContext):
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
-        args = call.argumentList().expression() if call.argumentList() is not None else []
+        args = call_args(call)
         mark = self.borrow_mark()
         # Se visitan siempre para ver sus errores. Imprimir no mueve: `print_str(s)`
         # deja `s` disponible, porque el host solo lee el String.
