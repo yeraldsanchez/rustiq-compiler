@@ -16,6 +16,7 @@ Reglas:
 from rustiq.errors import E_ASSIGN_IMMUTABLE, E_BAD_OPERAND, E_TYPE_MISMATCH, E_UNDECLARED, E_UNKNOWN_FIELD
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.moves import UNINITIALIZED
+from rustiq.tree import place_accessors
 from rustiq.types import F64, I32, RefT, StructT, Type
 
 ASSIGNABLE_KINDS = ("local", "param")
@@ -64,15 +65,10 @@ class AssignMixin:
 
     def _place_type(self, place: P.PlaceContext, current: Type | None) -> Type | None:
         """Tipo de lo que se asigna, recorriendo los campos e índices del `place`."""
-        children = place.children[1:]
-        i = 0
-        while i < len(children) and current is not None:
-            if children[i].getText() == ".":
-                current = self._field_type(current, children[i + 1])
-                i += 2
-            else:  # [ expresión ]
-                current = self.index_type(current, children[i + 1])
-                i += 3
+        for field, index in place_accessors(place):
+            if current is None:
+                break
+            current = self._field_type(current, field) if field is not None else self.index_type(current, index)
         return current
 
     def _field_type(self, operand: Type, ident) -> Type | None:

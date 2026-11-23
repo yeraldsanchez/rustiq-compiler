@@ -11,6 +11,7 @@ from rustiq.codegen.gen_structs import SLOT_SIZE, slot_offset
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.check_exprs import operators
+from rustiq.tree import place_accessors
 from rustiq.types import F64, StructT, Type, is_scalar
 
 # Instrucción de cada operador binario según el tipo de los operandos.
@@ -26,18 +27,6 @@ BINARY_F64 = {
 # Sufijos que nombran una ranura: se puede tomar su dirección.
 ACCESSORS = (RustiQParser.FieldSuffixContext, RustiQParser.IndexSuffixContext)
 
-
-def place_accessors(place: RustiQParser.PlaceContext):
-    """(campo, None) o (None, índice) por cada acceso del `place` después de la variable."""
-    children = place.children[1:]
-    i = 0
-    while i < len(children):
-        if children[i].getText() == ".":
-            yield children[i + 1].getText(), None
-            i += 2
-        else:  # [ expresión ]
-            yield None, children[i + 1]
-            i += 3
 
 # Escapes de un literal de char (fragmento ESC de la gramática).
 CHAR_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
@@ -228,7 +217,8 @@ class ExprsGenMixin:
         self.load_symbol(symbol)
         owner = symbol.type
         for i, (field, index) in enumerate(accessors):
-            owner = self.emit_slot_address(owner, field, index)
+            field_name = field.getText() if field is not None else None
+            owner = self.emit_slot_address(owner, field_name, index)
             if i < len(accessors) - 1:
                 self.emit("i32.load")  # una ranura intermedia guarda un puntero
         wt = wasm_type(owner)

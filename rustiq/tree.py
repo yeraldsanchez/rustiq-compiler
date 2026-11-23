@@ -33,3 +33,19 @@ def split_call(primary, suffixes: list) -> tuple:
     if suffixes and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
         return suffixes[0], suffixes[1:]
     return None, suffixes
+
+
+def place_accessors(place: P.PlaceContext):
+    """Cada acceso del `place` después de la variable: `p.a[i]` da `a` y luego `i`.
+
+    Por cada uno produce (nodo IDENT del campo, None) o (None, expresión del índice).
+    """
+    children = place.children[1:]
+    i = 0
+    while i < len(children):
+        if children[i].getText() == ".":
+            yield children[i + 1], None
+            i += 2
+        else:  # [ expresión ]
+            yield None, children[i + 1]
+            i += 3
