@@ -47,7 +47,25 @@ TOOL_TIMEOUT_S = 10
 # varios marcos. La compilación corre en un hilo con pila grande y un límite de
 # recursión alto, así un programa muy anidado no tumba el proceso.
 RECURSION_LIMIT = 100_000
+
+# Tamaño deseado de la pila del hilo de compilación. En Linux/CI 512 MB es
+# suficiente y barato (solo reserva virtual). Windows rechaza valores muy
+# grandes con ``ValueError`` al llamar ``threading.stack_size``; en ese caso
+# bajamos escalonadamente hasta encontrar uno soportado por la plataforma.
 THREAD_STACK_BYTES = 512 * 1024 * 1024
+
+# Probamos de mayor a menor hasta que la plataforma acepte uno. El primero
+# (512 MB) es el que usa CI/Linux; en Windows típicamente cae a 32–64 MB, que
+# alcanzan sobrado para ``test_anidacion.py``.
+STACK_SIZE_FALLBACKS: tuple[int, ...] = (
+    THREAD_STACK_BYTES,     # 512 MB  — Linux / CI
+    256 * 1024 * 1024,
+    128 * 1024 * 1024,
+    64 * 1024 * 1024,
+    32 * 1024 * 1024,
+    16 * 1024 * 1024,
+    8 * 1024 * 1024,        # último recurso: ~pila por defecto en Linux
+)
 
 # Los errores de backend no apuntan a una línea del programa fuente.
 BACKEND_LINE, BACKEND_COLUMN = 1, 1
@@ -252,10 +270,32 @@ def _safe_symbols(tree, info) -> list[SymbolHint]:
         return []
 
 
+def _apply_thread_stack_size() -> int:
+    """Fija el tamaño de pila más grande que acepte la plataforma.
+
+    Devuelve el valor previo para poder restaurarlo. En Windows
+    ``threading.stack_size(512 MB)`` lanza ``ValueError``; caemos a tamaños
+    menores (``STACK_SIZE_FALLBACKS``) hasta encontrar uno válido. En
+    Linux/CI el primero (512 MB) ya funciona.
+    """
+    previous = threading.stack_size()
+    for size in STACK_SIZE_FALLBACKS:
+        try:
+            threading.stack_size(size)
+            return previous
+        except (ValueError, RuntimeError):
+            continue
+    # Ningún tamaño fue aceptado por la plataforma: dejamos el anterior.
+    return previous
+
+
 def compile_source(source: str) -> CompileResult:
     """Compila un programa RustiQ. Si hay un solo error, no devuelve wasm.
 
-    Corre en un hilo con pila grande (ver RECURSION_LIMIT).
+    Corre en un hilo con pila grande (ver RECURSION_LIMIT). El tamaño de pila
+    se selecciona con ``_apply_thread_stack_size`` y debe estar vigente al
+    llamar ``start()``: en CPython el tamaño efectivo del hilo se fija en ese
+    momento, no al construir el ``Thread``.
     """
     outcome: list[CompileResult] = []
 
@@ -268,12 +308,14 @@ def compile_source(source: str) -> CompileResult:
     # El límite no se restaura: otro hilo del servidor puede estar compilando.
     if sys.getrecursionlimit() < RECURSION_LIMIT:
         sys.setrecursionlimit(RECURSION_LIMIT)
-    previous_stack = threading.stack_size(THREAD_STACK_BYTES)
+
+    previous_stack = _apply_thread_stack_size()
     try:
         worker = threading.Thread(target=run)
+        # start() dentro del try: así el hilo arranca con la pila grande.
+        worker.start()
     finally:
         threading.stack_size(previous_stack)
-    worker.start()
     worker.join()
     return outcome[0]
 
