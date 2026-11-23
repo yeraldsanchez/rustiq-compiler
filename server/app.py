@@ -56,6 +56,7 @@ class SymbolOut(BaseModel):
     type: str | None
     mutable: bool
     declaration: bool
+    id: str
 
 
 class CompileResponse(BaseModel):

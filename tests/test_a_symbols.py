@@ -92,3 +92,41 @@ def test_enum_y_variantes():
     assert s[(3, 23)].kind == "enum"  # tipo de retorno
     assert (s[(3, 38)].kind, s[(3, 38)].type) == ("variant", "Forma::Cuadrado(i32)")  # valor
     assert (s[(7, 16)].kind, s[(7, 16)].type) == ("variant", "Forma::Cuadrado(i32)")  # patrón
+
+
+SOMBRAS = """\
+enum Color { Rojo, Verde }
+fn pinta(c: Color) -> i32 {
+    match c {
+        Color::Rojo => 1,
+        _ => 2,
+    }
+}
+fn main() {
+    let x = 1;
+    {
+        let x = 2;
+        print_i32(x);
+    }
+    print_i32(x + pinta(Color::Verde));
+}
+"""
+
+
+def test_cada_uso_comparte_id_con_su_declaracion():
+    s = simbolos(SOMBRAS)
+    exterior, interior = s[(9, 9)], s[(11, 13)]
+    assert exterior.id != interior.id  # dos `x` en ámbitos distintos
+    assert s[(12, 19)].id == interior.id
+    assert s[(14, 15)].id == exterior.id
+    assert s[(2, 4)].id == s[(14, 19)].id == "fn:pinta"
+    assert s[(12, 9)].id == "host:print_i32"
+
+
+def test_variantes_declaradas_y_usadas():
+    s = simbolos(SOMBRAS)
+    rojo = s[(1, 14)]
+    assert (rojo.kind, rojo.declaration, rojo.id) == ("variant", True, "variant:Color::Rojo")
+    assert s[(4, 16)].id == rojo.id
+    assert s[(14, 32)].id == s[(1, 20)].id == "variant:Color::Verde"
+    assert s[(1, 6)].id == s[(2, 13)].id == "type:Color"
