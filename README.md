@@ -85,10 +85,9 @@ uv: `winget install astral-sh.uv` o `powershell -ExecutionPolicy ByPass -c "irm 
 
 ### Instalación
 
-Con [uv](https://docs.astral.sh/uv/) (recomendado):
+Desde la carpeta del proyecto, con [uv](https://docs.astral.sh/uv/) (recomendado). Si no se tiene la carpeta, se puede clonar el repositorio con `git clone https://github.com/yeraldsanchez/rustiq-compiler`:
 
 ```bash
-git clone https://github.com/yeraldsanchez/rustiq-compiler
 cd rustiq-compiler
 uv sync
 source .venv/bin/activate      # en fish: source .venv/bin/activate.fish
