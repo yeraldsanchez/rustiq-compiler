@@ -23,6 +23,7 @@ from rustiq.semantic.info import SemanticInfo
 from rustiq.semantic.moves import MovesMixin
 from rustiq.semantic.scope_defaults import ScopeDefaults
 from rustiq.semantic.scopes import ScopesMixin
+from rustiq.tree import split_call
 from rustiq.types import UNIT, Type
 
 
@@ -80,14 +81,8 @@ class Analyzer(
 
     def visitPostfix(self, ctx: RustiQParser.PostfixContext):
         primary = ctx.primary()
-        suffixes = ctx.children[1:]
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            current = self.check_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
-        else:
-            current = self.visit(primary)
+        call, suffixes = split_call(primary, ctx.children[1:])
+        current = self.check_call(primary, call) if call is not None else self.visit(primary)
         for suffix in suffixes:
             if current is not None:
                 self.info.expr_type.put(suffix, current)

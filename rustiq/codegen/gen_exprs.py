@@ -128,24 +128,12 @@ class ExprsGenMixin:
     def _emit_postfix_address(self, postfix) -> None:
         """`&p.x` o `&a[i]`: la dirección de la ranura, no una copia del valor."""
         *leading, last = postfix.children[1:]
-        self._emit_postfix_prefix(postfix.primary(), leading)
+        self.emit_postfix(postfix.primary(), leading)
         owner = self.info.expr_type.get(last)
         if isinstance(last, RustiQParser.FieldSuffixContext):
             self.emit_slot_address(owner, field=last.IDENT().getText())
         else:
             self.emit_slot_address(owner, index=last.expression())
-
-    def _emit_postfix_prefix(self, primary, suffixes) -> None:
-        """Igual que `visitPostfix`, pero solo con los sufijos dados."""
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            self.gen_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
-        else:
-            self.visit(primary)
-        for suffix in suffixes:
-            self.visit(suffix)
 
     def _emit_temporary_cell(self, operand) -> None:
         """`&5` o `&f()`: guarda el valor en una celda nueva y deja su dirección."""

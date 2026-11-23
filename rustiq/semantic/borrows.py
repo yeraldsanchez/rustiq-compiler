@@ -24,7 +24,7 @@ from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCA
 from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
 from rustiq.semantic.moves import moved_identifier
-from rustiq.tree import unwrap
+from rustiq.tree import split_call, unwrap
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
 
@@ -224,11 +224,8 @@ def _call_of(expression):
     node = expression
     while node is not None:
         if isinstance(node, P.PostfixContext) and node.getChildCount() > 1:
-            suffixes = node.children[1:]
-            primary = node.primary()
-            if len(suffixes) == 1 and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
-                return primary, suffixes[0]
-            return None
+            call, rest = split_call(node.primary(), node.children[1:])
+            return (node.primary(), call) if call is not None and not rest else None
         node = unwrap(node)  # `-x`, `!x`, `&x` tienen dos hijos: aquí terminan en None
     return None
 

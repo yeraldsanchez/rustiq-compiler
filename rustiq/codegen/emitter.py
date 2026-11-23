@@ -21,6 +21,7 @@ from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser
 from rustiq.semantic.flow import block_tail, expression_diverges
 from rustiq.semantic.info import SemanticInfo, Symbol
+from rustiq.tree import split_call
 from rustiq.types import I32, UNIT, Type
 
 INDENT = "  "
@@ -255,13 +256,13 @@ class Emitter(
     # visitIndexSuffix de B.
 
     def visitPostfix(self, ctx: RustiQParser.PostfixContext):
-        primary = ctx.primary()
-        suffixes = ctx.children[1:]
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            self.gen_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
+        self.emit_postfix(ctx.primary(), ctx.children[1:])
+
+    def emit_postfix(self, primary, suffixes: list) -> None:
+        """Emite `primary` seguido de los sufijos dados (todos o solo los primeros)."""
+        call, suffixes = split_call(primary, suffixes)
+        if call is not None:
+            self.gen_call(primary, call)
         else:
             self.visit(primary)
         for suffix in suffixes:

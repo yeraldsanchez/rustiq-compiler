@@ -21,3 +21,15 @@ def unwrap(node):
     if node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
         return node.getChild(0)
     return None
+
+
+def split_call(primary, suffixes: list) -> tuple:
+    """Separa la llamada directa `nombre(args)` de los demás sufijos de un `postfix`.
+
+    Devuelve (sufijo de llamada, sufijos restantes) si `primary` es un nombre
+    seguido de `(...)`, y si no (None, suffixes). Solo las llamadas por nombre
+    son llamadas: `f(1)(2)` llama a `f` y el segundo `(2)` es un error.
+    """
+    if suffixes and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
+        return suffixes[0], suffixes[1:]
+    return None, suffixes
