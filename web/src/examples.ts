@@ -40,7 +40,7 @@ const invalid = import.meta.glob<string>("../../tests/invalid/*.rq", {
 // Cabecera de las pruebas inválidas con el error esperado. Es para el runner,
 // no para quien lee el ejemplo, así que se quita del código.
 const EXPECTED_ERROR_HEADER = /^\/\/ ERROR \S+ (E_[A-Z_]+).*\r?\n/;
-// Prefijos de dueño o de etapa en los nombres de las pruebas: a_, c_, test_b3_.
+// Prefijos de los nombres de las pruebas que no aportan al título: a_, c_, test_b3_.
 const NAME_PREFIX = /^(?:test_[a-z]\d+_|[abc]_)/;
 const LEADING_COMMENT = /^\/\/\s*(.+)/;
 

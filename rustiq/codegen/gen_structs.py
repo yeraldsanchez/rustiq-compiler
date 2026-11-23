@@ -1,7 +1,6 @@
 """Generación de código de structs y tuplas.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 
 Layout (docs/memoria.md): un struct o tupla es un puntero a sus campos en orden
 de declaración, cada uno en una ranura de 8 bytes. Un campo struct o tupla guarda

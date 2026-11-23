@@ -1,26 +1,24 @@
 """Movimientos: estados de cada valor y uso después de mover.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas.
-
 API pública que consulta `borrows` (y a la inversa, `is_borrowed`). Ninguno
 modifica el estado del otro.
 
 Cada símbolo local o parámetro está disponible, movido o sin inicializar. Un
-valor que no es Copy (G1) se mueve cuando una variable aparece sola en un lugar
+valor que no es Copy se mueve cuando una variable aparece sola en un lugar
 que consume su valor: argumento, `return`, valor final de un bloque, dato de un
 struct, tupla o enum, valor de un `match` o cuerpo de un brazo. Leer un campo
 (`p.x`) no mueve.
 
-Ramas (G8): cada rama de un `if` o brazo de `match` empieza con el estado de
+Ramas: cada rama de un `if` o brazo de `match` empieza con el estado de
 antes y, al terminar, cada variable queda en el peor estado entre el de antes y
 el de cada rama. Así reponer una variable dentro de una rama no cuenta. Si las
 ramas cubren todos los casos (`if` con `else`, `match`), el de antes no entra:
 `let x: i32;` asignada en todas las ramas queda inicializada.
 
-Ciclos (G8): mover dentro de un ciclo una variable declarada fuera de él es error.
+Ciclos: mover dentro de un ciclo una variable declarada fuera de él es error.
 
-Ya conectado desde B: `visitIdentP` llama a `check_use` y `visitLetDecl` a
-`consume` y `track_symbol`.
+`visitIdentP` llama a `check_use`, y `visitLetDecl` a `consume` y
+`track_symbol`.
 
 Los operandos de una misma expresión (argumentos, campos, elementos) se mueven
 uno por uno al visitarlos (`visit_and_consume`), así `f(s, s)` es error.
@@ -136,7 +134,7 @@ class MovesMixin:
                 self.consume(expression)
         return types
 
-    # --- Ramas (G8) ------------------------------------------------------------
+    # --- Ramas ------------------------------------------------------------
 
     def branch_start(self) -> dict[int, str]:
         """Estado de antes de las ramas. Cada rama empieza desde aquí."""

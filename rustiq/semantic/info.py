@@ -1,6 +1,6 @@
-"""Contrato 3: resultado del análisis semántico.
+"""Resultado del análisis semántico.
 
-Es la frontera entre el análisis (A y B) y el codegen. El codegen lee solo
+Es la frontera entre el análisis y el codegen. El codegen lee solo
 esto y nunca vuelve a inferir tipos.
 """
 

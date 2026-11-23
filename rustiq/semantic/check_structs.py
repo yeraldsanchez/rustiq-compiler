@@ -1,6 +1,4 @@
 """Structs y tuplas: declaración, literal y acceso a campo.
-
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas.
 """
 
 from rustiq.errors import (

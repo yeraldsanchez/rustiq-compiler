@@ -268,8 +268,7 @@ class Emitter(
     # --- Espina compartida de `postfix` (ver analyzer.py) -----------------------
     #
     # Cada sufijo encuentra el valor del operando en la pila y recibe su tipo en
-    # `info.expr_type[sufijo]`. visitCallSuffix y visitFieldSuffix son de A,
-    # visitIndexSuffix de B.
+    # `info.expr_type[sufijo]`.
 
     def visitPostfix(self, ctx: P.PostfixContext):
         self.emit_postfix(ctx.primary(), ctx.children[1:])

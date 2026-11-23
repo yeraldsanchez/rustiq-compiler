@@ -1,4 +1,4 @@
-/** Forma JSON de las respuestas de `POST /compile` (contrato 6 del plan). */
+/** Forma JSON de las respuestas de `POST /compile` (`server/app.py`). */
 
 export type Phase = "lexico" | "sintactico" | "semantico" | "backend";
 

@@ -1,6 +1,6 @@
-"""Contrato 2: tipos del lenguaje.
+"""Tipos del lenguaje.
 
-Los usan el análisis semántico (A y B) y el backend. La regla de copia vive
+Los usan el análisis semántico y el backend. La regla de copia vive
 solo en `is_copy`.
 """
 
@@ -77,7 +77,7 @@ def is_scalar(t: Type) -> bool:
 
 
 def is_copy(t: Type) -> bool:
-    """Regla única de copia (decisión G1).
+    """Regla única de copia: solo los escalares y `&T` son Copy.
 
     - i32, f64, bool, char y () son Copy.
     - &T es Copy, &mut T no.

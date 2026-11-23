@@ -1,7 +1,6 @@
 """Generación de código de referencias y Strings.
 
-Dueño: B (Byron). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 """
 
 from rustiq.generated.RustiQParser import RustiQParser as P

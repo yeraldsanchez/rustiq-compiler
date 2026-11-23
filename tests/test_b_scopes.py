@@ -1,4 +1,4 @@
-"""Pruebas de ámbitos, sombreado, declaraciones locales y resolución de identificadores (Carril B)."""
+"""Pruebas de ámbitos, sombreado, declaraciones locales y resolución de identificadores."""
 
 from antlr4 import CommonTokenStream, InputStream
 
@@ -18,7 +18,7 @@ def _analyze(source: str):
 
 
 # ---------------------------------------------------------------
-# Casos válidos: ámbitos, sombreado (G2) e inferencia en let
+# Casos válidos: ámbitos, sombreado e inferencia en let
 # ---------------------------------------------------------------
 
 def test_sombreado_en_bloque_interno_asigna_uid_distinto():
@@ -75,7 +75,7 @@ def test_inferencia_let_y_let_sin_inicializador():
 
 
 # ---------------------------------------------------------------
-# Casos inválidos: errores de ámbito y declaraciones (G2, T4)
+# Casos inválidos: errores de ámbito y declaraciones
 # ---------------------------------------------------------------
 
 def test_error_variable_no_declarada():

@@ -1,6 +1,6 @@
 """Qué es cada identificador del programa, para mostrarlo en el editor.
 
-Dueño: A (Yerald). No vuelve a analizar nada: lee lo que ya dejó el análisis
+No vuelve a analizar nada: lee lo que ya dejó el análisis
 en `SemanticInfo` (variables, parámetros y constantes) y recorre el árbol
 para las funciones, structs, enums y variantes, que se resuelven por nombre
 y no quedan en `info.symbol`.

@@ -1,6 +1,5 @@
 """Asignación: `=`, `+=`, `-=`, `*=`, `/=` sobre un `place`.
 
-Dueño: B (Byron). Lo implementó A con su permiso para cerrar movimientos.
 
 Va después de `BorrowsMixin` en la herencia: `BorrowsMixin.visitAssignment`
 revisa el préstamo activo y llama a este con `super()`.

@@ -1,4 +1,4 @@
-"""Tabla de símbolos, resolución de ámbitos y declaraciones locales (Carril B)."""
+"""Tabla de símbolos, resolución de ámbitos y declaraciones locales."""
 
 from rustiq.errors import E_BORROW_CONFLICT, E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
 from rustiq.generated.RustiQParser import RustiQParser as P
@@ -41,7 +41,7 @@ class ScopesMixin:
             self.push_scope()
         current = scopes[-1]
 
-        # Regla G2: prohibido redeclarar en el mismo ámbito (incluyendo parámetros en el cuerpo);
+        # Prohibido redeclarar en el mismo ámbito (incluyendo parámetros en el cuerpo);
         # permitido sombreado en bloques internos.
         if self._is_redeclared_in_current_or_params(name):
             self.error(node, E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
@@ -60,7 +60,7 @@ class ScopesMixin:
         return None
 
     # ---------------------------------------------------------------
-    # Visitors de declaraciones locales e identificadores (Carril B)
+    # Visitors de declaraciones locales e identificadores
     # ---------------------------------------------------------------
 
     def visitLetDecl(self, ctx):

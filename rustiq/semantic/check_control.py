@@ -1,9 +1,7 @@
 """Control de flujo y bloques: if, while, loop, break, continue, return.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas; si necesita algo de
-otro mixin, llama su método público y nunca copia la lógica.
 
-`if` es solo sentencia (P4): sus ramas, y el cuerpo de `while` y `loop`, no
+`if` es solo sentencia: sus ramas, y el cuerpo de `while` y `loop`, no
 pueden producir valor. Un bloque usado como expresión sí.
 """
 

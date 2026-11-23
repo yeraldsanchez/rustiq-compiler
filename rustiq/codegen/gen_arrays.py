@@ -1,7 +1,6 @@
 """Generación de código de arrays.
 
-Dueño: B (Byron). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos. Lo implementó A con su permiso.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 
 Layout (docs/memoria.md): un array es un puntero a `n` ranuras de 8 bytes, igual
 que una tupla. Cada acceso revisa el índice al ejecutar y hace `unreachable` si

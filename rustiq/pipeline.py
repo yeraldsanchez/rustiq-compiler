@@ -1,8 +1,8 @@
 """Pipeline completo: parse, semántica, codegen, wat2wasm y wasm-validate.
 
-Dueño: A (Yerald). Es el punto de entrada que usan las pruebas, la CLI y el
+Es el punto de entrada que usan las pruebas, la CLI y el
 servidor. Cada fase solo corre si la anterior terminó sin errores, y si hay
-un solo error nunca se devuelve wasm (contrato 6).
+un solo error nunca se devuelve wasm.
 """
 
 import shutil

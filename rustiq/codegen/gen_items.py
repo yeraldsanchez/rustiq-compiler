@@ -1,6 +1,6 @@
 """Generación de código de llamadas a funciones.
 
-Dueño: A (Yerald). Lee `SemanticInfo` y nunca vuelve a inferir tipos.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 """
 
 from rustiq.builtins import HOST_FUNCTIONS
