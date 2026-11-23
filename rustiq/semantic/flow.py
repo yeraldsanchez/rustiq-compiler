@@ -8,6 +8,7 @@ con `return` en todos los brazos, o un `loop` sin `break`).
 from antlr4 import ParserRuleContext
 
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.tree import unwrap
 
 
 def block_tail(block: P.BlockContext):
@@ -62,15 +63,11 @@ def expression_diverges(expression) -> bool:
 def bare_primary(expression):
     """El `primary` si la expresión es solo eso (sin operadores ni sufijos), si no None."""
     node = expression
-    while True:
+    while node is not None:
         if isinstance(node, P.PostfixContext):
             return node.primary() if node.getChildCount() == 1 else None
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+        node = unwrap(node)
+    return None
 
 
 def _if_diverges(stmt: P.IfStmtContext) -> bool:

@@ -2,7 +2,7 @@
 
 from rustiq.errors import E_BORROW_CONFLICT, E_REDECLARED, E_TYPE_MISMATCH, E_UNDECLARED
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.info import Symbol
+from rustiq.semantic.info import Symbol, SymbolKind
 from rustiq.types import RefT, Type, UNIT
 
 
@@ -14,18 +14,15 @@ def _is_borrow_operand(ident) -> bool:
 
 
 class ScopesMixin:
-    def _scopes_list(self) -> list[dict[str, Symbol]]:
-        return self.__dict__.setdefault("_scopes", [])
-
     def push_scope(self) -> None:
-        self._scopes_list().append({})
+        self._scopes.append({})
 
     def pop_scope(self) -> None:
         self.release_scope_borrows()
-        self._scopes_list().pop()
+        self._scopes.pop()
 
     def _is_redeclared_in_current_or_params(self, name: str) -> bool:
-        scopes = self._scopes_list()
+        scopes = self._scopes
         if not scopes:
             return False
         if name in scopes[-1]:
@@ -34,12 +31,12 @@ class ScopesMixin:
         # Si estamos en un bloque anidado más adentro, scopes[-2] ya no será exclusivo de parámetros.
         if len(scopes) >= 3:
             parent = scopes[-2]
-            if name in parent and parent[name].kind == "param" and all(s.kind == "param" for s in parent.values()):
+            if name in parent and parent[name].kind == SymbolKind.PARAM and all(s.kind == SymbolKind.PARAM for s in parent.values()):
                 return True
         return False
 
-    def declare(self, name: str, type: Type, mutable: bool, kind: str, node) -> Symbol | None:
-        scopes = self._scopes_list()
+    def declare(self, name: str, type: Type, mutable: bool, kind: SymbolKind, node) -> Symbol | None:
+        scopes = self._scopes
         if not scopes:
             self.push_scope()
         current = scopes[-1]
@@ -50,14 +47,14 @@ class ScopesMixin:
             self.error(node, E_REDECLARED, f"'{name}' ya fue declarado en este ámbito")
             return None
 
-        uid = self.__dict__.get("_next_uid", 0)
-        self._next_uid = uid + 1
+        uid = self._next_uid
+        self._next_uid += 1
         symbol = Symbol(uid=uid, name=name, type=type, mutable=mutable, kind=kind)
         current[name] = symbol
         return symbol
 
     def lookup(self, name: str) -> Symbol | None:
-        for scope in reversed(self._scopes_list()):
+        for scope in reversed(self._scopes):
             if name in scope:
                 return scope[name]
         return None
@@ -99,7 +96,7 @@ class ScopesMixin:
 
         # Se declara aunque el tipo sea None (error previo): así los usos
         # siguientes no reportan E_UNDECLARED en cascada y `mismatch` calla.
-        symbol = self.declare(name, final_type, mutable, "local", ctx.IDENT())
+        symbol = self.declare(name, final_type, mutable, SymbolKind.LOCAL, ctx.IDENT())
         if symbol is None:
             return None
         self.info.symbol.put(ctx, symbol)

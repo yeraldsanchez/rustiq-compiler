@@ -15,6 +15,7 @@ brazo va `unreachable`: el análisis de exhaustividad garantiza que no se llega.
 from rustiq.codegen.gen_structs import PAYLOAD_FIRST_SLOT, TAG_SLOT, slot_offset
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.tree import call_args
 from rustiq.types import UNIT
 
 
@@ -25,7 +26,7 @@ class MatchGenMixin:
         definition = self.info.enums[ctx.IDENT(0).getText()]
         variant = ctx.IDENT(1).getText()
         payload = definition.variants[variant]
-        args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
+        args = call_args(ctx)
         pointer = self.alloc_slots(PAYLOAD_FIRST_SLOT + len(payload))
         self.emit(f"local.get {pointer}")
         self.emit(f"i32.const {definition.tag_of(variant)}")
@@ -44,18 +45,16 @@ class MatchGenMixin:
         exit_label = self.new_label("fin_match")
         result_part = f" (result {wasm_type(result)})" if result != UNIT else ""
         self.emit(f"block {exit_label}{result_part}")
-        self._depth += 1
-        for arm in ctx.matchArm():
-            next_arm = self.new_label("sig_brazo")
-            self.emit(f"block {next_arm}")
-            self._depth += 1
-            self.gen_pattern(arm.pattern(), value, next_arm)
-            self.visit(arm.expression())
-            self.emit(f"br {exit_label}")
-            self._depth -= 1
-            self.emit("end")
-        self.emit("unreachable")
-        self._depth -= 1
+        with self.indented():
+            for arm in ctx.matchArm():
+                next_arm = self.new_label("sig_brazo")
+                self.emit(f"block {next_arm}")
+                with self.indented():
+                    self.gen_pattern(arm.pattern(), value, next_arm)
+                    self.visit(arm.expression())
+                    self.emit(f"br {exit_label}")
+                self.emit("end")
+            self.emit("unreachable")
         self.emit("end")
 
     # --- Patrones ---------------------------------------------------------------

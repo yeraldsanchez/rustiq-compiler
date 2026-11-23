@@ -2,8 +2,8 @@
 ;;   [0, fin de los literales)  datos estáticos: los literales de String (segmentos `data`)
 ;;   [inicio del heap, ...)     heap, crece hacia arriba y nunca se libera
 ;; El heap empieza en 1024, o justo después de los literales (redondeado a 8)
-;; si ocupan más. El Emitter reescribe el valor inicial de $heap y el tamaño
-;; inicial de la memoria (Emitter._place_heap); 1024 es el valor por defecto.
+;; si ocupan más. El Emitter cambia el valor inicial de $heap y el tamaño
+;; inicial de la memoria (Emitter._heap_start); 1024 es el valor por defecto.
 
 ;; Siguiente dirección libre del heap. Solo avanza.
 (global $heap (mut i32) (i32.const 1024))

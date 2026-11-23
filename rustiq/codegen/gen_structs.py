@@ -10,7 +10,7 @@ así que acceder por `&T` no necesita cargar nada extra.
 """
 
 from rustiq.codegen.wasm_types import wasm_type
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.types import RefT, StructT, Type
 
 SLOT_SIZE = 8
@@ -32,7 +32,7 @@ class StructsGenMixin:
 
     def alloc_slots(self, count: int) -> str:
         """Reserva `count` ranuras y deja el puntero en un local temporal nuevo."""
-        pointer = self.new_temp(StructT("_"))
+        pointer = self.new_pointer_temp()
         self.emit(f"i32.const {slot_offset(count)}")
         self.emit("call $alloc")
         self.emit(f"local.set {pointer}")
@@ -43,7 +43,7 @@ class StructsGenMixin:
         self.visit(expression)
         self.emit(f"{wasm_type(value_type)}.store offset={slot_offset(index)}")
 
-    def visitStructLiteral(self, ctx: RustiQParser.StructLiteralContext):
+    def visitStructLiteral(self, ctx: P.StructLiteralContext):
         fields = self.info.structs[ctx.IDENT().getText()].fields
         pointer = self.alloc_slots(len(fields))
         for init in ctx.fieldInit():  # se evalúan en el orden en que se escribieron
@@ -51,13 +51,13 @@ class StructsGenMixin:
             self.store_slot(pointer, list(fields).index(name), fields[name], init.expression())
         self.emit(f"local.get {pointer}")
 
-    def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
+    def visitTupleLiteral(self, ctx: P.TupleLiteralContext):
         elems = self.info.expr_type.get(ctx).elems
         pointer = self.alloc_slots(len(elems))
         for index, (elem_type, expression) in enumerate(zip(elems, ctx.expression())):
             self.store_slot(pointer, index, elem_type, expression)
         self.emit(f"local.get {pointer}")
 
-    def visitFieldSuffix(self, ctx: RustiQParser.FieldSuffixContext):
+    def visitFieldSuffix(self, ctx: P.FieldSuffixContext):
         index, field_type = self.field_slot(self.info.expr_type.get(ctx), ctx.IDENT().getText())
         self.emit(f"{wasm_type(field_type)}.load offset={slot_offset(index)}")
