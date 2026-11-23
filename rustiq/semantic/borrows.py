@@ -20,12 +20,12 @@ de cualquier argumento), los brazos de un `match` y el valor final de un bloque.
 
 from dataclasses import dataclass
 
-from antlr4 import ParserRuleContext
-
 from rustiq.errors import E_ASSIGN_WHILE_BORROWED, E_DANGLING_REF, E_RETURN_LOCAL_REF
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.flow import bare_primary as _bare_primary, block_tail
+from rustiq.semantic.flow import bare_primary, block_tail
+from rustiq.semantic.info import VARIABLE_KINDS
 from rustiq.semantic.moves import moved_identifier
+from rustiq.tree import call_args, split_call, unwrap
 from rustiq.types import ArrayT, EnumT, RefT, StructT, TupleT
 
 
@@ -64,7 +64,7 @@ class BorrowsMixin:
         self._add_borrow(symbol, mutable=True)
 
     def _add_borrow(self, symbol, mutable: bool) -> None:
-        depth = len(self._scopes_list())
+        depth = len(self._scopes)
         self._active_borrows.append(_BorrowEntry(symbol.uid, mutable, depth))
 
     # --- Vida ------------------------------------------------------------------
@@ -81,14 +81,14 @@ class BorrowsMixin:
 
     def keep_borrows(self, mark: int, depth: int | None = None) -> None:
         """Los préstamos creados desde `mark` viven hasta el fin del ámbito `depth` (o el actual)."""
-        depth = len(self._scopes_list()) if depth is None else depth
+        depth = len(self._scopes) if depth is None else depth
         for b in self._active_borrows[mark:]:
             b.temporary = False
             b.depth = depth
 
     def release_scope_borrows(self) -> None:
         """Al cerrar un ámbito, suelta los préstamos que vivían en él."""
-        depth = len(self._scopes_list())
+        depth = len(self._scopes)
         self._active_borrows = [b for b in self._active_borrows if b.depth < depth]
 
     def may_hold_ref(self, t, seen=None) -> bool:
@@ -137,19 +137,15 @@ class BorrowsMixin:
             return True  # `&5`, `&f()`: un temporal
         if isinstance(symbol.type, RefT) and operand.getChildCount() > 1:
             return symbol.uid in self._local_refs  # `&r.x`: se sigue la referencia r
-        return symbol.kind in ("local", "param")
+        return symbol.kind in VARIABLE_KINDS
 
     def _value_points_to_local(self, expression) -> bool:
         """Sigue llamadas, `match` y bloques: `id(&x)`, `match c { _ => &x }`, `{ &x }`."""
-        call = _call_of(expression)
-        if call is not None:
-            callee, suffix = call
-            sig = self.info.functions.get(callee.IDENT().getText())
-            if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
-                return False
+        args = ref_call_args(self.info, expression)
+        if args:
             # Sin anotaciones de vida, el resultado puede venir de cualquier argumento.
-            return any(self.points_to_local(arg) for arg in suffix.argumentList().expression())
-        primary = _bare_primary(expression)
+            return any(self.points_to_local(arg) for arg in args)
+        primary = bare_primary(expression)
         if isinstance(primary, P.MatchPContext):
             return any(self.points_to_local(arm.expression()) for arm in primary.matchExpr().matchArm())
         if isinstance(primary, P.BlockPContext):
@@ -164,7 +160,7 @@ class BorrowsMixin:
 
     def scope_depth(self, symbol) -> int:
         """Cantidad de ámbitos abiertos hasta el que declaró `symbol` (incluido)."""
-        for i, scope in enumerate(self._scopes_list()):
+        for i, scope in enumerate(self._scopes):
             if scope.get(symbol.name) is symbol:
                 return i + 1
         return 0
@@ -193,7 +189,7 @@ class BorrowsMixin:
         ref_depth = self.scope_depth(ref_symbol)
         for root in borrowed_roots(self, expression):
             symbol = self.info.symbol.get(root)
-            if symbol is None or symbol.kind not in ("local", "param") or isinstance(symbol.type, RefT):
+            if symbol is None or symbol.kind not in VARIABLE_KINDS or isinstance(symbol.type, RefT):
                 continue
             if self.scope_depth(symbol) > ref_depth:
                 self.error(
@@ -210,47 +206,35 @@ def borrowed_roots(analyzer, expression) -> list:
     if operand is not None:
         primary = operand.primary()
         return [primary] if isinstance(primary, P.IdentPContext) else []
+    return [root for arg in ref_call_args(analyzer.info, expression) for root in borrowed_roots(analyzer, arg)]
+
+
+def ref_call_args(info, expression) -> list:
+    """Los argumentos si la expresión es solo `f(args)` y `f` devuelve una referencia; si no, []."""
     call = _call_of(expression)
     if call is None:
         return []
     callee, suffix = call
-    sig = analyzer.info.functions.get(callee.IDENT().getText())
-    if sig is None or not isinstance(sig.ret, RefT) or suffix.argumentList() is None:
-        return []
-    return [root for arg in suffix.argumentList().expression() for root in borrowed_roots(analyzer, arg)]
+    sig = info.functions.get(callee.IDENT().getText())
+    return call_args(suffix) if sig is not None and isinstance(sig.ret, RefT) else []
 
 
 def _call_of(expression):
     """(callee, sufijo) si la expresión es solo `nombre(args)`, si no None."""
     node = expression
-    while True:
-        if isinstance(node, P.PostfixContext):
-            suffixes = node.children[1:]
-            primary = node.primary()
-            if len(suffixes) == 1 and isinstance(suffixes[0], P.CallSuffixContext) and isinstance(primary, P.IdentPContext):
-                return primary, suffixes[0]
-            if suffixes:
-                return None
-            node = primary
-        elif isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif isinstance(node, P.UnaryContext) and node.getChildCount() != 1:
-            return None
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+    while node is not None:
+        if isinstance(node, P.PostfixContext) and node.getChildCount() > 1:
+            call, rest = split_call(node.primary(), node.children[1:])
+            return (node.primary(), call) if call is not None and not rest else None
+        node = unwrap(node)  # `-x`, `!x`, `&x` tienen dos hijos: aquí terminan en None
+    return None
 
 
 def borrowed_operand(expression):
     """El `postfix` de `&x...` si la expresión es solo eso (con o sin paréntesis), si no None."""
     node = expression
-    while True:
+    while node is not None:
         if isinstance(node, P.UnaryContext) and node.AMP() is not None:
             return node.postfix()
-        if isinstance(node, P.ParenPContext):
-            node = node.expression()
-        elif node.getChildCount() == 1 and isinstance(node.getChild(0), ParserRuleContext):
-            node = node.getChild(0)
-        else:
-            return None
+        node = unwrap(node)
+    return None

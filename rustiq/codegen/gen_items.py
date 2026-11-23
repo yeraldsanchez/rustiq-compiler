@@ -4,7 +4,8 @@ Dueño: A (Yerald). Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 """
 
 from rustiq.builtins import HOST_FUNCTIONS
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
+from rustiq.tree import call_args
 
 USER_FN_PREFIX = "$f_"  # evita choques con las funciones del runtime ($alloc, $memcpy...)
 HOST_NAMES = {name for name, _ in HOST_FUNCTIONS}
@@ -16,9 +17,8 @@ def function_name(name: str) -> str:
 
 
 class ItemsGenMixin:
-    def gen_call(self, callee: RustiQParser.IdentPContext, call: RustiQParser.CallSuffixContext) -> None:
+    def gen_call(self, callee: P.IdentPContext, call: P.CallSuffixContext) -> None:
         """`nombre(args)`: apila los argumentos en orden y llama. El resultado queda en la pila."""
-        if call.argumentList() is not None:
-            for arg in call.argumentList().expression():
-                self.visit(arg)
+        for arg in call_args(call):
+            self.visit(arg)
         self.emit(f"call {function_name(callee.IDENT().getText())}")

@@ -13,9 +13,9 @@ Los nodos de una cadena con un solo hijo (`expression` → `logicalOr` → … �
 
 ## Qué provee A
 
-### Ámbitos (`ScopeDefaults`, `semantic/scope_defaults.py`)
+### Ámbitos (`ScopesMixin`, `semantic/scopes.py`)
 
-Implementación por defecto del contrato. `ScopesMixin` (B) la reemplaza al definir los mismos métodos.
+Lo implementa B. Contrato que usan los demás mixins:
 
 ```python
 push_scope() / pop_scope()

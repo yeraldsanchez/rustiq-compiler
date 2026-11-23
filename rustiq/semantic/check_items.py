@@ -18,9 +18,10 @@ from rustiq.errors import (
     E_UNDECLARED,
     E_UNKNOWN_TYPE,
 )
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import block_diverges, block_tail, expression_diverges
-from rustiq.semantic.info import FuncSig
+from rustiq.semantic.info import FuncSig, SymbolKind
+from rustiq.tree import call_args
 from rustiq.types import (
     BOOL,
     CHAR,
@@ -40,7 +41,7 @@ MAIN = "main"
 
 
 class ItemsMixin:
-    def visitProgram(self, ctx: RustiQParser.ProgramContext):
+    def visitProgram(self, ctx: P.ProgramContext):
         self.push_scope()
         self.define_types(ctx)  # StructsMixin: structs y enums
         self._register_host_functions()
@@ -61,7 +62,7 @@ class ItemsMixin:
         for name, param_type in HOST_FUNCTIONS:
             self.info.functions[name] = FuncSig(name, [("valor", param_type)], UNIT)
 
-    def _register_function(self, fn: RustiQParser.FunctionDeclContext) -> None:
+    def _register_function(self, fn: P.FunctionDeclContext) -> None:
         name = fn.IDENT().getText()
         if name in self.info.functions:
             self.error(fn.IDENT(), E_REDECLARED, f"La función '{name}' ya fue declarada")
@@ -74,14 +75,14 @@ class ItemsMixin:
         self.info.functions[name] = FuncSig(name, params, ret)
         self._declared_fns[name] = fn
 
-    def _declare_global_const(self, decl: RustiQParser.ConstDeclContext) -> None:
+    def _declare_global_const(self, decl: P.ConstDeclContext) -> None:
         symbol = self.declare(
-            decl.IDENT().getText(), self.resolve_type(decl.type_()), False, "const", decl.IDENT()
+            decl.IDENT().getText(), self.resolve_type(decl.type_()), False, SymbolKind.CONST, decl.IDENT()
         )
         if symbol is not None:
             self.info.symbol.put(decl, symbol)
 
-    def _check_main(self, ctx: RustiQParser.ProgramContext) -> None:
+    def _check_main(self, ctx: P.ProgramContext) -> None:
         sig = self.info.functions.get(MAIN)
         if sig is None:
             self.error(ctx, E_BAD_MAIN, "Falta la función 'main'")
@@ -94,19 +95,19 @@ class ItemsMixin:
 
     # --- Tipos ----------------------------------------------------------------
 
-    def resolve_type(self, ctx: RustiQParser.TypeContext) -> Type:
+    def resolve_type(self, ctx: P.TypeContext) -> Type:
         """Convierte un nodo `type` del árbol en un `Type` del contrato 2."""
-        if isinstance(ctx, RustiQParser.PrimitiveTContext):
+        if isinstance(ctx, P.PrimitiveTContext):
             return PRIMITIVES[ctx.primitiveType().getText()]
-        if isinstance(ctx, RustiQParser.StringTContext):
+        if isinstance(ctx, P.StringTContext):
             return STRING
-        if isinstance(ctx, RustiQParser.ArrayTContext):
+        if isinstance(ctx, P.ArrayTContext):
             return ArrayT(self.resolve_type(ctx.type_()), int(ctx.INT_LIT().getText()))
-        if isinstance(ctx, RustiQParser.TupleTContext):
+        if isinstance(ctx, P.TupleTContext):
             return TupleT(tuple(self.resolve_type(t) for t in ctx.type_()))
-        if isinstance(ctx, RustiQParser.RefTContext):
+        if isinstance(ctx, P.RefTContext):
             return RefT(self.resolve_type(ctx.type_()), ctx.MUT() is not None)
-        if isinstance(ctx, RustiQParser.RefRefTContext):
+        if isinstance(ctx, P.RefRefTContext):
             # `&&T` es `&(&T)` y `&&mut T` es `&(&mut T)` (P10)
             return RefT(RefT(self.resolve_type(ctx.type_()), ctx.MUT() is not None), False)
         name = ctx.IDENT().getText()
@@ -117,7 +118,7 @@ class ItemsMixin:
 
     # --- Items ----------------------------------------------------------------
 
-    def visitFunctionDecl(self, ctx: RustiQParser.FunctionDeclContext):
+    def visitFunctionDecl(self, ctx: P.FunctionDeclContext):
         name = ctx.IDENT().getText()
         if self._declared_fns.get(name) is not ctx:
             return  # duplicada: ya se reportó y no se analiza su cuerpo
@@ -125,7 +126,7 @@ class ItemsMixin:
         self.push_scope()
         if ctx.parameterList() is not None:
             for p, (_, ptype) in zip(ctx.parameterList().parameter(), sig.params):
-                symbol = self.declare(p.IDENT().getText(), ptype, p.MUT() is not None, "param", p.IDENT())
+                symbol = self.declare(p.IDENT().getText(), ptype, p.MUT() is not None, SymbolKind.PARAM, p.IDENT())
                 if symbol is not None:
                     self.info.symbol.put(p, symbol)
                     self.track_symbol(symbol)
@@ -148,7 +149,7 @@ class ItemsMixin:
                 block.RBRACE(), E_BAD_RETURN, f"'{sig.name}' debe devolver {sig.ret} en todos sus caminos"
             )
 
-    def visitConstDecl(self, ctx: RustiQParser.ConstDeclContext):
+    def visitConstDecl(self, ctx: P.ConstDeclContext):
         symbol = self.info.symbol.get(ctx)
         actual = self.visit(ctx.expression())
         if symbol is not None:
@@ -165,10 +166,10 @@ class ItemsMixin:
 
     # --- Llamadas -------------------------------------------------------------
 
-    def check_call(self, callee: RustiQParser.IdentPContext, call: RustiQParser.CallSuffixContext):
+    def check_call(self, callee: P.IdentPContext, call: P.CallSuffixContext):
         """Resuelve `nombre(args)`: existencia, número y tipo de argumentos."""
         name = callee.IDENT().getText()
-        args = call.argumentList().expression() if call.argumentList() is not None else []
+        args = call_args(call)
         mark = self.borrow_mark()
         # Se visitan siempre para ver sus errores. Imprimir no mueve: `print_str(s)`
         # deja `s` disponible, porque el host solo lee el String.

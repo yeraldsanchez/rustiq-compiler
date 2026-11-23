@@ -16,7 +16,7 @@ from antlr4 import ParserRuleContext
 
 from rustiq.builtins import HOST_FUNCTIONS
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.info import EnumDef, FuncSig, SemanticInfo, StructDef, Symbol
+from rustiq.semantic.info import EnumDef, FuncSig, SemanticInfo, StructDef, Symbol, SymbolKind
 from rustiq.types import UNIT
 
 # Nodos donde se declara un nombre. El resto de las anotaciones son usos.
@@ -37,7 +37,7 @@ class SymbolHint:
     column: int  # desde 1
     length: int
     name: str
-    kind: str  # "local" | "param" | "const" | "func" | "host" | "struct" | "enum" | "variant"
+    kind: SymbolKind
     # El tipo, o la declaración completa si es función, struct, enum o
     # variante. None si hubo un error.
     type: str | None
@@ -66,7 +66,7 @@ def _name_token(ctx: ParserRuleContext):
 
 
 def _hint(
-    token, name: str, kind: str, type_text: str | None, mutable: bool, declaration: bool, hint_id: str
+    token, name: str, kind: SymbolKind, type_text: str | None, mutable: bool, declaration: bool, hint_id: str
 ) -> SymbolHint:
     return SymbolHint(
         token.line, token.column + 1, len(token.text), name, kind, type_text, mutable, declaration, hint_id
@@ -128,9 +128,11 @@ def _type_name_hint(token, info: SemanticInfo, declaration: bool) -> SymbolHint 
     """Un nombre que puede ser struct o enum (por ejemplo, en un tipo)."""
     name = token.text
     if name in info.structs:
-        return _hint(token, name, "struct", struct_text(info.structs[name]), False, declaration, _type_id(name))
+        text = struct_text(info.structs[name])
+        return _hint(token, name, SymbolKind.STRUCT, text, False, declaration, _type_id(name))
     if name in info.enums:
-        return _hint(token, name, "enum", enum_text(info.enums[name]), False, declaration, _type_id(name))
+        text = enum_text(info.enums[name])
+        return _hint(token, name, SymbolKind.ENUM, text, False, declaration, _type_id(name))
     return None
 
 
@@ -140,7 +142,7 @@ def _enum_path_hints(node, info: SemanticInfo) -> list[SymbolHint]:
     enum = info.enums.get(enum_token.text)
     if enum is None:
         return []
-    hints = [_hint(enum_token, enum.name, "enum", enum_text(enum), False, False, _type_id(enum.name))]
+    hints = [_hint(enum_token, enum.name, SymbolKind.ENUM, enum_text(enum), False, False, _type_id(enum.name))]
     if variant_token.text in enum.variants:
         hints.append(_variant_hint(variant_token, enum, declaration=False))
     return hints
@@ -149,7 +151,7 @@ def _enum_path_hints(node, info: SemanticInfo) -> list[SymbolHint]:
 def _variant_hint(token, enum: EnumDef, declaration: bool) -> SymbolHint:
     variant = token.text
     text = f"{enum.name}::{variant_text(enum, variant)}"
-    return _hint(token, variant, "variant", text, False, declaration, _variant_id(enum.name, variant))
+    return _hint(token, variant, SymbolKind.VARIANT, text, False, declaration, _variant_id(enum.name, variant))
 
 
 def _enum_decl_hints(node: P.EnumDeclContext, info: SemanticInfo) -> list[SymbolHint]:
@@ -171,7 +173,8 @@ def _hints_for_node(node, info: SemanticInfo) -> list[SymbolHint]:
         sig = info.functions.get(node.IDENT().getText())
         if sig is None:
             return []
-        return [_hint(node.IDENT().symbol, sig.name, "func", signature(sig), False, True, _function_id(sig.name))]
+        token = node.IDENT().symbol
+        return [_hint(token, sig.name, SymbolKind.FUNC, signature(sig), False, True, _function_id(sig.name))]
     if isinstance(node, P.PostfixContext):
         hint = _call_hint(node, info)
         return [hint] if hint else []
@@ -213,6 +216,7 @@ def _call_hint(node: P.PostfixContext, info: SemanticInfo) -> SymbolHint | None:
     sig = info.functions.get(primary.IDENT().getText())
     if sig is None:
         return None
+    token = primary.IDENT().symbol
     if sig.name in _HOST_NAMES:
-        return _hint(primary.IDENT().symbol, sig.name, "host", signature(sig), False, False, _host_id(sig.name))
-    return _hint(primary.IDENT().symbol, sig.name, "func", signature(sig), False, False, _function_id(sig.name))
+        return _hint(token, sig.name, SymbolKind.HOST, signature(sig), False, False, _host_id(sig.name))
+    return _hint(token, sig.name, SymbolKind.FUNC, signature(sig), False, False, _function_id(sig.name))

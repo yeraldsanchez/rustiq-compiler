@@ -8,7 +8,7 @@ from antlr4 import ParserRuleContext
 from antlr4.tree.Tree import TerminalNode
 
 from rustiq.errors import E_NOT_CALLABLE, E_TYPE_MISMATCH, SEMANTICO, CompileError
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.semantic.borrows import BorrowsMixin
 from rustiq.semantic.check_assign import AssignMixin
@@ -19,10 +19,10 @@ from rustiq.semantic.check_items import ItemsMixin
 from rustiq.semantic.check_match import MatchMixin
 from rustiq.semantic.check_refs import RefsMixin
 from rustiq.semantic.check_structs import StructsMixin
-from rustiq.semantic.info import SemanticInfo
+from rustiq.semantic.info import SemanticInfo, Symbol
 from rustiq.semantic.moves import MovesMixin
-from rustiq.semantic.scope_defaults import ScopeDefaults
 from rustiq.semantic.scopes import ScopesMixin
+from rustiq.tree import split_call
 from rustiq.types import UNIT, Type
 
 
@@ -30,7 +30,6 @@ class Analyzer(
     ItemsMixin, StructsMixin, ControlMixin, MatchMixin, MovesMixin,  # A
     ScopesMixin, ExprsMixin, ArraysMixin, RefsMixin,  # B
     BorrowsMixin, AssignMixin,  # B; AssignMixin va después: BorrowsMixin lo llama con super()
-    ScopeDefaults,  # respaldo del contrato de ámbitos; ScopesMixin lo reemplaza
     RustiQVisitor,
 ):
     def __init__(self) -> None:
@@ -42,8 +41,9 @@ class Analyzer(
         self.move_states: dict[int, str] = {}  # uid -> estado (moves.py)
         self.move_loop_depth: dict[int, int] = {}  # uid -> ciclos abiertos al declararlo
         self.moved_in_branches: list[set[int]] = []  # uids movidos en cada if/match abierto
-        # Initialize borrow tracking
-        BorrowsMixin.__init__(self)
+        self._scopes: list[dict[str, Symbol]] = []  # ámbitos abiertos, el último es el actual (scopes.py)
+        self._next_uid = 0  # uid del próximo símbolo declarado
+        BorrowsMixin.__init__(self)  # préstamos activos (borrows.py)
 
     def analyze(self, tree) -> tuple[SemanticInfo, list[CompileError]]:
         self.visit(tree)
@@ -78,16 +78,10 @@ class Analyzer(
     #   - visitFieldSuffix: A
     #   - visitIndexSuffix: B
 
-    def visitPostfix(self, ctx: RustiQParser.PostfixContext):
+    def visitPostfix(self, ctx: P.PostfixContext):
         primary = ctx.primary()
-        suffixes = ctx.children[1:]
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            current = self.check_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
-        else:
-            current = self.visit(primary)
+        call, suffixes = split_call(primary, ctx.children[1:])
+        current = self.check_call(primary, call) if call is not None else self.visit(primary)
         for suffix in suffixes:
             if current is not None:
                 self.info.expr_type.put(suffix, current)
@@ -96,7 +90,7 @@ class Analyzer(
             self.info.expr_type.put(ctx, current)
         return current
 
-    def visitCallSuffix(self, ctx: RustiQParser.CallSuffixContext):
+    def visitCallSuffix(self, ctx: P.CallSuffixContext):
         self.error(ctx, E_NOT_CALLABLE, "Solo se pueden llamar funciones por su nombre")
         return None
 

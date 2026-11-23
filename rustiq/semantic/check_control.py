@@ -12,13 +12,14 @@ from rustiq.errors import (
     E_BREAK_OUTSIDE_LOOP,
     E_TYPE_MISMATCH,
 )
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import block_tail
+from rustiq.semantic.info import SymbolKind
 from rustiq.types import BOOL, UNIT, Type
 
 
 class ControlMixin:
-    def visitBlock(self, ctx: RustiQParser.BlockContext):
+    def visitBlock(self, ctx: P.BlockContext):
         self.push_scope()
         tail_node = block_tail(ctx)
         statements = ctx.statement()
@@ -36,17 +37,17 @@ class ControlMixin:
             self.info.expr_type.put(ctx, tail)
         return tail
 
-    def visitExprStmt(self, ctx: RustiQParser.ExprStmtContext):
+    def visitExprStmt(self, ctx: P.ExprStmtContext):
         actual = self.visit(ctx.expression())
         if actual is not None:
             self.info.expr_type.put(ctx.expression(), actual)  # el codegen descarta el valor
 
-    def visitBlockS(self, ctx: RustiQParser.BlockSContext):
+    def visitBlockS(self, ctx: P.BlockSContext):
         self._check_statement_block(ctx.block(), "Un bloque usado como sentencia")
 
     # --- if / while / loop -----------------------------------------------
 
-    def visitIfStmt(self, ctx: RustiQParser.IfStmtContext):
+    def visitIfStmt(self, ctx: P.IfStmtContext):
         self._check_condition(ctx.condition())
         before, branches = self.branch_start(), []
         for block in ctx.block():
@@ -60,11 +61,11 @@ class ControlMixin:
         has_else = len(ctx.block()) == 2 or ctx.ifStmt() is not None
         self.branch_end(before, branches, exhaustive=has_else)
 
-    def visitWhileStmt(self, ctx: RustiQParser.WhileStmtContext):
+    def visitWhileStmt(self, ctx: P.WhileStmtContext):
         self._check_condition(ctx.condition())
         self._check_loop_body(ctx.block(), "El cuerpo de while")
 
-    def visitLoopStmt(self, ctx: RustiQParser.LoopStmtContext):
+    def visitLoopStmt(self, ctx: P.LoopStmtContext):
         self._check_loop_body(ctx.block(), "El cuerpo de loop")
 
     def _check_loop_body(self, block, what: str) -> None:
@@ -72,12 +73,12 @@ class ControlMixin:
         self._check_statement_block(block, what)
         self.loop_depth -= 1
 
-    def _check_condition(self, condition: RustiQParser.ConditionContext) -> None:
+    def _check_condition(self, condition: P.ConditionContext) -> None:
         mark = self.borrow_mark()  # los préstamos de la condición no llegan al cuerpo
         self.mismatch(condition, E_TYPE_MISMATCH, BOOL, self.visit(condition), "La condición")
         self.release_temporary_borrows(mark)
 
-    def _check_statement_block(self, block: RustiQParser.BlockContext, what: str) -> None:
+    def _check_statement_block(self, block: P.BlockContext, what: str) -> None:
         actual = self.visit(block)
         if actual is not None and actual != UNIT:
             self.error(
@@ -87,17 +88,17 @@ class ControlMixin:
 
     # --- break / continue / return -------------------------------------------
 
-    def visitBreakStmt(self, ctx: RustiQParser.BreakStmtContext):
+    def visitBreakStmt(self, ctx: P.BreakStmtContext):
         self._check_inside_loop(ctx, "break")
 
-    def visitContinueStmt(self, ctx: RustiQParser.ContinueStmtContext):
+    def visitContinueStmt(self, ctx: P.ContinueStmtContext):
         self._check_inside_loop(ctx, "continue")
 
     def _check_inside_loop(self, ctx, keyword: str) -> None:
         if self.loop_depth == 0:
             self.error(ctx, E_BREAK_OUTSIDE_LOOP, f"'{keyword}' solo puede usarse dentro de while o loop")
 
-    def visitReturnStmt(self, ctx: RustiQParser.ReturnStmtContext):
+    def visitReturnStmt(self, ctx: P.ReturnStmtContext):
         expected: Type = self.fn_ret
         if ctx.expression() is None:
             if expected != UNIT:
@@ -113,13 +114,13 @@ class ControlMixin:
 
     # --- const local --------------------------------------------------------------
 
-    def visitConstLocalDecl(self, ctx: RustiQParser.ConstLocalDeclContext):
+    def visitConstLocalDecl(self, ctx: P.ConstLocalDeclContext):
         declared = self.resolve_type(ctx.type_())
         name = ctx.IDENT().getText()
         self.mismatch(
             ctx.expression(), E_TYPE_MISMATCH, declared, self.visit(ctx.expression()),
             f"La constante '{name}'",
         )
-        symbol = self.declare(name, declared, False, "const", ctx.IDENT())
+        symbol = self.declare(name, declared, False, SymbolKind.CONST, ctx.IDENT())
         if symbol is not None:
             self.info.symbol.put(ctx, symbol)

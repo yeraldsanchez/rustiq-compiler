@@ -9,9 +9,10 @@ B en `b/etapa3-refs-borrows`, pasados por A, con cortocircuito en `&&` y `||`.
 from rustiq.codegen.gen_arrays import array_of
 from rustiq.codegen.gen_structs import SLOT_SIZE, slot_offset
 from rustiq.codegen.wasm_types import wasm_type
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.check_exprs import operators
-from rustiq.types import F64, StructT, Type, is_scalar
+from rustiq.tree import place_accessors
+from rustiq.types import F64, Type, is_scalar
 
 # Instrucción de cada operador binario según el tipo de los operandos.
 BINARY_I32 = {
@@ -24,20 +25,8 @@ BINARY_F64 = {
 }
 
 # Sufijos que nombran una ranura: se puede tomar su dirección.
-ACCESSORS = (RustiQParser.FieldSuffixContext, RustiQParser.IndexSuffixContext)
+ACCESSORS = (P.FieldSuffixContext, P.IndexSuffixContext)
 
-
-def place_accessors(place: RustiQParser.PlaceContext):
-    """(campo, None) o (None, índice) por cada acceso del `place` después de la variable."""
-    children = place.children[1:]
-    i = 0
-    while i < len(children):
-        if children[i].getText() == ".":
-            yield children[i + 1].getText(), None
-            i += 2
-        else:  # [ expresión ]
-            yield None, children[i + 1]
-            i += 3
 
 # Escapes de un literal de char (fragmento ESC de la gramática).
 CHAR_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
@@ -53,7 +42,7 @@ def char_value(raw_literal: str) -> int:
 
 
 class ExprsGenMixin:
-    def visitLiteral(self, ctx: RustiQParser.LiteralContext):
+    def visitLiteral(self, ctx: P.LiteralContext):
         text = ctx.getText()
         if ctx.INT_LIT() is not None:
             self.emit(f"i32.const {text}")
@@ -66,24 +55,24 @@ class ExprsGenMixin:
         else:
             self.emit(f"i32.const {1 if ctx.TRUE() is not None else 0}")
 
-    def visitLetDecl(self, ctx: RustiQParser.LetDeclContext):
+    def visitLetDecl(self, ctx: P.LetDeclContext):
         symbol = self.info.symbol.get(ctx)
         if symbol is not None:
             self.declare_symbol(symbol)
             if ctx.expression() is not None:
                 self.store_symbol(symbol, lambda: self.visit(ctx.expression()))
 
-    def visitIdentP(self, ctx: RustiQParser.IdentPContext):
+    def visitIdentP(self, ctx: P.IdentPContext):
         symbol = self.info.symbol.get(ctx)
         if symbol is not None:
             self.load_symbol(symbol)
 
-    def visitParenP(self, ctx: RustiQParser.ParenPContext):
+    def visitParenP(self, ctx: P.ParenPContext):
         self.visit(ctx.expression())
 
     # --- Operadores ------------------------------------------------------------
 
-    def visitUnary(self, ctx: RustiQParser.UnaryContext):
+    def visitUnary(self, ctx: P.UnaryContext):
         operand = ctx.postfix()
         if ctx.MINUS() is not None:
             if self.info.expr_type.get(operand) == F64:
@@ -120,7 +109,7 @@ class ExprsGenMixin:
     def _boxed_variable(self, postfix):
         """El símbolo si `postfix` es solo una variable guardada en celda; si no None."""
         primary = postfix.primary()
-        if postfix.getChildCount() != 1 or not isinstance(primary, RustiQParser.IdentPContext):
+        if postfix.getChildCount() != 1 or not isinstance(primary, P.IdentPContext):
             return None
         symbol = self.info.symbol.get(primary)
         return symbol if symbol is not None and symbol.address_taken else None
@@ -128,28 +117,16 @@ class ExprsGenMixin:
     def _emit_postfix_address(self, postfix) -> None:
         """`&p.x` o `&a[i]`: la dirección de la ranura, no una copia del valor."""
         *leading, last = postfix.children[1:]
-        self._emit_postfix_prefix(postfix.primary(), leading)
+        self.emit_postfix(postfix.primary(), leading)
         owner = self.info.expr_type.get(last)
-        if isinstance(last, RustiQParser.FieldSuffixContext):
+        if isinstance(last, P.FieldSuffixContext):
             self.emit_slot_address(owner, field=last.IDENT().getText())
         else:
             self.emit_slot_address(owner, index=last.expression())
 
-    def _emit_postfix_prefix(self, primary, suffixes) -> None:
-        """Igual que `visitPostfix`, pero solo con los sufijos dados."""
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            self.gen_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
-        else:
-            self.visit(primary)
-        for suffix in suffixes:
-            self.visit(suffix)
-
     def _emit_temporary_cell(self, operand) -> None:
         """`&5` o `&f()`: guarda el valor en una celda nueva y deja su dirección."""
-        cell = self.new_temp(StructT("_"))
+        cell = self.new_pointer_temp()
         self.emit(f"i32.const {SLOT_SIZE}")
         self.emit("call $alloc")
         self.emit(f"local.tee {cell}")
@@ -168,13 +145,13 @@ class ExprsGenMixin:
         self.emit_element_address(index, array.size)
         return array.elem
 
-    def visitMultiplicative(self, ctx: RustiQParser.MultiplicativeContext):
+    def visitMultiplicative(self, ctx: P.MultiplicativeContext):
         self._arithmetic_chain(ctx.unary(), operators(ctx))
 
-    def visitAdditive(self, ctx: RustiQParser.AdditiveContext):
+    def visitAdditive(self, ctx: P.AdditiveContext):
         self._arithmetic_chain(ctx.multiplicative(), operators(ctx))
 
-    def visitComparison(self, ctx: RustiQParser.ComparisonContext):
+    def visitComparison(self, ctx: P.ComparisonContext):
         ops = operators(ctx.relOp()) if ctx.relOp() is not None else []
         self._arithmetic_chain(ctx.additive(), ops)
 
@@ -186,11 +163,11 @@ class ExprsGenMixin:
             self.visit(operand)
             self.emit(f"{wasm_type(operand_type)}.{table[op]}")
 
-    def visitLogicalAnd(self, ctx: RustiQParser.LogicalAndContext):
+    def visitLogicalAnd(self, ctx: P.LogicalAndContext):
         # a && b: si a es true vale b; si no, false sin evaluar b
         self._short_circuit(ctx.comparison(), on_true=None, on_false="i32.const 0")
 
-    def visitLogicalOr(self, ctx: RustiQParser.LogicalOrContext):
+    def visitLogicalOr(self, ctx: P.LogicalOrContext):
         # a || b: si a es true vale true sin evaluar b; si no, vale b
         self._short_circuit(ctx.logicalAnd(), on_true="i32.const 1", on_false=None)
 
@@ -199,13 +176,11 @@ class ExprsGenMixin:
         self.visit(operands[0])
         for operand in operands[1:]:
             self.emit("if (result i32)")
-            self._depth += 1
-            self._emit_or_visit(on_true, operand)
-            self._depth -= 1
+            with self.indented():
+                self._emit_or_visit(on_true, operand)
             self.emit("else")
-            self._depth += 1
-            self._emit_or_visit(on_false, operand)
-            self._depth -= 1
+            with self.indented():
+                self._emit_or_visit(on_false, operand)
             self.emit("end")
 
     def _emit_or_visit(self, constant: str | None, operand) -> None:
@@ -216,7 +191,7 @@ class ExprsGenMixin:
 
     # --- Asignación ------------------------------------------------------------
 
-    def visitAssignment(self, ctx: RustiQParser.AssignmentContext):
+    def visitAssignment(self, ctx: P.AssignmentContext):
         symbol = self.info.symbol.get(ctx)
         op = ctx.assignOp().getText()
         accessors = list(place_accessors(ctx.place()))
@@ -240,12 +215,13 @@ class ExprsGenMixin:
         self.load_symbol(symbol)
         owner = symbol.type
         for i, (field, index) in enumerate(accessors):
-            owner = self.emit_slot_address(owner, field, index)
+            field_name = field.getText() if field is not None else None
+            owner = self.emit_slot_address(owner, field_name, index)
             if i < len(accessors) - 1:
                 self.emit("i32.load")  # una ranura intermedia guarda un puntero
         wt = wasm_type(owner)
         if op != "=":  # la dirección se usa dos veces: leer el valor anterior y guardar
-            address = self.new_temp(StructT("_"))
+            address = self.new_pointer_temp()
             self.emit(f"local.tee {address}")
             self.emit(f"local.get {address}")
             self.emit(f"{wt}.load")

@@ -1,8 +1,8 @@
 # Evidencias de compilación, validación y ejecución
 
-Generado con `python -m scripts.evidencias` el 2026-11-22 15:50.
+Generado con `python -m scripts.evidencias` el 2026-11-22 18:46.
 
-Herramientas: wat2wasm 1.0.42; wasm-validate 1.0.42; Python 3.12.15
+Herramientas: wat2wasm 1.0.42; wasm-validate 1.0.42; Python 3.12.3
 
 ## Programas válidos
 
@@ -10,6 +10,7 @@ Cada carpeta de `validos/` tiene el fuente, el `.wat`, el `.wasm`, la salida de 
 
 | Programa | Compila | wasm-validate | Ejecuta | Salida = esperada |
 | --- | --- | --- | --- | --- |
+| b_integracion_etapa4 | sí | sí | sí | sí |
 | b_str_escapes | sí | sí | sí | sí |
 | c_bloque_anidado_final | sí | sí | sí | sí |
 | c_escapes_y_comentarios | sí | sí | sí | sí |
@@ -71,8 +72,15 @@ Cada uno debe fallar con el error de su cabecera `// ERROR` y no producir módul
 | a_tipo_desconocido | `semantico E_UNKNOWN_TYPE 2:17` El tipo 'Fantasma' no existe | sí | sí |
 | a_uso_despues_de_mover | `semantico E_USE_AFTER_MOVE 7:10` 'a' se usó después de moverse | sí | sí |
 | a_uso_sin_inicializar | `semantico E_UNINITIALIZED 6:10` 'a' se usó antes de asignarle un valor | sí | sí |
+| b_asignar_deref | `sintactico E_SYNTAX 5:8` Error: no viable alternative at input '*r=' | sí | sí |
 | b_asignar_prestado | `semantico E_ASSIGN_WHILE_BORROWED 5:5` No se puede asignar a 'x' mientras está prestado | sí | sí |
+| b_cast_as | `sintactico E_SYNTAX 3:15` Error: missing ';' at 'as' | sí | sí |
+| b_if_expresion | `sintactico E_SYNTAX 3:13` Error: extraneous input 'if' expecting {'match', 'true', 'false', '-', '*', '!', '&', '(', '{', '[', IDENT, FLOAT_LIT, INT_LIT, CHAR_LIT, STRING_LIT} | sí | sí |
+| b_patron_negativo | `sintactico E_SYNTAX 5:9` Error: no viable alternative at input 'matchx{-' | sí | sí |
+| b_redeclaracion_mismo_ambito | `semantico E_REDECLARED 4:9` 'x' ya fue declarado en este ámbito | sí | sí |
 | b_retornar_ref_local | `semantico E_RETURN_LOCAL_REF 4:5` No se puede devolver una referencia a un valor local | sí | sí |
+| b_tupla_indice_punto | `sintactico E_SYNTAX 4:15` Error: mismatched input '0' expecting IDENT | sí | sí |
+| b_underscore_como_ident | `sintactico E_SYNTAX 3:9` Error: mismatched input '_' expecting {'mut', IDENT} | sí | sí |
 | c_bloque_sentencia_con_valor | `semantico E_TYPE_MISMATCH 4:9` Un bloque usado como sentencia no puede producir un valor (i32); agrega ';' o usa return | sí | sí |
 | c_caracter_no_valido | `lexico E_INVALID_CHAR 3:15` Carácter no válido: '#' | sí | sí |
 | c_char_de_varios | `lexico E_INVALID_CHAR 3:13` Un literal char lleva exactamente un carácter | sí | sí |

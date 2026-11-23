@@ -1,0 +1,4 @@
+// ERROR sintactico E_SYNTAX 3:15
+fn main() {
+    let x = 1 as f64;
+}

@@ -13,8 +13,9 @@ from rustiq.errors import (
     E_UNKNOWN_VARIANT,
 )
 from rustiq.generated.RustiQParser import RustiQParser as P
-from rustiq.semantic.info import EnumDef
+from rustiq.semantic.info import EnumDef, SymbolKind
 from rustiq.semantic.flow import expression_diverges
+from rustiq.tree import call_args
 from rustiq.types import BOOL, UNIT, EnumT, TupleT, Type, is_copy
 
 
@@ -23,7 +24,7 @@ class MatchMixin:
 
     def visitEnumValue(self, ctx: P.EnumValueContext):
         enum_name, variant = ctx.IDENT(0).getText(), ctx.IDENT(1).getText()
-        args = ctx.argumentList().expression() if ctx.argumentList() is not None else []
+        args = call_args(ctx)
         arg_types = self.visit_and_consume(args)
         payload = self._variant_payload(ctx, enum_name, variant)
         if payload is None:
@@ -98,7 +99,7 @@ class MatchMixin:
 
     def visitBindingPat(self, ctx: P.BindingPatContext):
         expected = self.info.expr_type.get(ctx)
-        symbol = self.declare(ctx.IDENT().getText(), expected, False, "local", ctx.IDENT())
+        symbol = self.declare(ctx.IDENT().getText(), expected, False, SymbolKind.LOCAL, ctx.IDENT())
         if symbol is None:
             return None
         self.info.symbol.put(ctx, symbol)

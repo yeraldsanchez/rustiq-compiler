@@ -11,7 +11,7 @@ from rustiq.errors import (
     E_UNKNOWN_FIELD,
     E_UNKNOWN_TYPE,
 )
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.info import EnumDef, StructDef
 from rustiq.types import EnumT, RefT, StructT, TupleT
 
@@ -19,7 +19,7 @@ from rustiq.types import EnumT, RefT, StructT, TupleT
 class StructsMixin:
     # --- Definiciones (pasada previa de visitProgram) -------------------
 
-    def define_types(self, program: RustiQParser.ProgramContext) -> None:
+    def define_types(self, program: P.ProgramContext) -> None:
         """Registra los nombres de structs y enums y luego sus campos y variantes."""
         decls = []
         for item in program.item():
@@ -34,12 +34,12 @@ class StructsMixin:
             self.type_names[name] = StructT(name) if is_struct else EnumT(name)
             decls.append(decl)
         for decl in decls:
-            if isinstance(decl, RustiQParser.StructDeclContext):
+            if isinstance(decl, P.StructDeclContext):
                 self._define_struct(decl)
             else:
                 self._define_enum(decl)
 
-    def _define_struct(self, decl: RustiQParser.StructDeclContext) -> None:
+    def _define_struct(self, decl: P.StructDeclContext) -> None:
         fields = {}
         for f in decl.fieldDecl():
             fname = f.IDENT().getText()
@@ -49,7 +49,7 @@ class StructsMixin:
             fields[fname] = self.resolve_type(f.type_())
         self.info.structs[decl.IDENT().getText()] = StructDef(decl.IDENT().getText(), fields)
 
-    def _define_enum(self, decl: RustiQParser.EnumDeclContext) -> None:
+    def _define_enum(self, decl: P.EnumDeclContext) -> None:
         variants = {}
         for v in decl.variantDecl():
             vname = v.IDENT().getText()
@@ -62,7 +62,7 @@ class StructsMixin:
 
     # --- Expresiones ----------------------------------------------------------
 
-    def visitStructLiteral(self, ctx: RustiQParser.StructLiteralContext):
+    def visitStructLiteral(self, ctx: P.StructLiteralContext):
         name = ctx.IDENT().getText()
         definition = self.info.structs.get(name)
         inits = ctx.fieldInit()
@@ -91,7 +91,7 @@ class StructsMixin:
         self.info.expr_type.put(ctx, result)
         return result
 
-    def visitTupleLiteral(self, ctx: RustiQParser.TupleLiteralContext):
+    def visitTupleLiteral(self, ctx: P.TupleLiteralContext):
         exprs = ctx.expression()
         elems = [self.reject_unit(e, t, "Un elemento de tupla") for e, t in zip(exprs, self.visit_and_consume(exprs))]
         if any(e is None for e in elems):
@@ -100,7 +100,7 @@ class StructsMixin:
         self.info.expr_type.put(ctx, result)
         return result
 
-    def visitFieldSuffix(self, ctx: RustiQParser.FieldSuffixContext):
+    def visitFieldSuffix(self, ctx: P.FieldSuffixContext):
         operand = self.info.expr_type.get(ctx)
         base = operand.target if isinstance(operand, RefT) else operand  # auto-deref de un nivel
         field = ctx.IDENT().getText()

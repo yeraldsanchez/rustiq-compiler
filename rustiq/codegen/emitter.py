@@ -5,6 +5,7 @@ reglas. Esta clase aporta lo común: el módulo, las líneas de salida y los
 imports del host (ABI en docs/memoria.md).
 """
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -18,21 +19,28 @@ from rustiq.codegen.gen_structs import StructsGenMixin
 from rustiq.codegen.wasm_types import wasm_type
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 from rustiq.builtins import HOST_FUNCTIONS
-from rustiq.generated.RustiQParser import RustiQParser
+from rustiq.generated.RustiQParser import RustiQParser as P
 from rustiq.semantic.flow import block_tail, expression_diverges
 from rustiq.semantic.info import SemanticInfo, Symbol
+from rustiq.tree import split_call
 from rustiq.types import I32, UNIT, Type
 
 INDENT = "  "
 CELL_SIZE = 8  # una celda guarda un escalar (i32 o f64)
 PAGE_SIZE = 65536
 HEAP_ALIGN = 8
-# Línea del runtime que fija el inicio del heap; se reescribe si los literales no caben.
-HEAP_GLOBAL = "(global $heap (mut i32) (i32.const 1024))"
 DEFAULT_HEAP_START = 1024
 
 # Allocator y helpers de String que se pegan dentro de cada módulo.
 RUNTIME_WAT = (Path(__file__).parent / "runtime.wat").read_text(encoding="utf-8")
+# Línea del runtime que fija el inicio del heap. Trae el valor por defecto, así
+# runtime.wat también sirve solo (tests/test_runtime.py).
+HEAP_GLOBAL = f"(global $heap (mut i32) (i32.const {DEFAULT_HEAP_START}))"
+assert RUNTIME_WAT.count(HEAP_GLOBAL) == 1, "runtime.wat debe declarar la global $heap una vez"
+
+
+def ceil_div(a: int, b: int) -> int:
+    return -(-a // b)
 
 @dataclass
 class FunctionCtx:
@@ -52,10 +60,16 @@ class Emitter(
 ):
     def __init__(self, info: SemanticInfo) -> None:
         self.info = info
+        self._reset()
+
+    def _reset(self) -> None:
+        """Estado de una emisión. `generate` lo reinicia para poder reutilizar el Emitter."""
         self._lines: list[str] = []
         self._depth = 0
         self._fn: FunctionCtx | None = None
-        self.global_consts: dict[int, RustiQParser.ExpressionContext] = {}
+        self.global_consts: dict[int, P.ExpressionContext] = {}  # uid -> inicializador
+        self._data_segments: list[tuple[int, bytes]] = []  # (dirección, bytes) de cada literal
+        self._data_offset = 0  # primera dirección libre de la zona de literales
 
     # --- Convención de los visitX de expresión ----------------------------
     #
@@ -64,6 +78,15 @@ class Emitter(
 
     def emit(self, line: str = "") -> None:
         self._lines.append(INDENT * self._depth + line)
+
+    @contextmanager
+    def indented(self):
+        """Las líneas emitidas dentro del `with` van un nivel más adentro."""
+        self._depth += 1
+        try:
+            yield
+        finally:
+            self._depth -= 1
 
     # --- Contexto de función ---------------------------------------------
 
@@ -130,6 +153,10 @@ class Emitter(
         self.fn.temps += 1
         return self.declare_local(f"$tmp{self.fn.temps}", t)
 
+    def new_pointer_temp(self) -> str:
+        """Local temporal para guardar una dirección de memoria."""
+        return self.new_temp(I32)
+
     def new_label(self, prefix: str) -> str:
         """Etiqueta única dentro de la función, para block, loop e if."""
         self.fn.labels += 1
@@ -138,46 +165,37 @@ class Emitter(
     # --- Módulo -------------------------------------------------------------
 
     def generate(self, tree) -> str:
-        """Devuelve el módulo WAT completo."""
-        self._lines = []
-        self._depth = 0
-        self._fn = None
-        self.global_consts = {}
-        self._data_segments = []
-        self._data_offset = 0
+        """Devuelve el módulo WAT completo.
+
+        Las funciones se emiten primero, aparte: hasta recorrerlas no se conocen los
+        literales de String, y de ellos depende dónde empieza el heap.
+        """
+        self._reset()
+        with self.indented():
+            self.visit(tree)
+        functions, self._lines = self._lines, []
+        heap_start = self._heap_start()
+
         self.emit("(module")
-        self._depth += 1
-        for name, param_type in HOST_FUNCTIONS:
-            self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
-        memory_line = len(self._lines)
-        self.emit('(memory (export "memory") 1)')
-        heap_line = None
-        for line in RUNTIME_WAT.splitlines():
-            if line.strip() == HEAP_GLOBAL:
-                heap_line = len(self._lines)
-            self.emit(line)
-        self.visit(tree)
-        self._place_heap(memory_line, heap_line)
-        for offset, data in self._data_segments:
-            escaped = "".join(f"\\{b:02x}" for b in data)
-            self.emit(f'(data (i32.const {offset}) "{escaped}")')
-        self._depth -= 1
+        with self.indented():
+            for name, param_type in HOST_FUNCTIONS:
+                self.emit(f'(import "env" "{name}" (func ${name} (param {wasm_type(param_type)})))')
+            self.emit(f'(memory (export "memory") {ceil_div(heap_start, PAGE_SIZE)})')
+            runtime = RUNTIME_WAT.replace(HEAP_GLOBAL, f"(global $heap (mut i32) (i32.const {heap_start}))")
+            for line in runtime.splitlines():
+                self.emit(line)
+            self._lines.extend(functions)
+            for offset, data in self._data_segments:
+                escaped = "".join(f"\\{b:02x}" for b in data)
+                self.emit(f'(data (i32.const {offset}) "{escaped}")')
         self.emit(")")
         return "\n".join(self._lines) + "\n"
 
-    def _place_heap(self, memory_line: int, heap_line: int | None) -> None:
-        """El heap empieza después de los literales: en 1024 o más allá si no caben."""
-        aligned = -(-self._data_offset // HEAP_ALIGN) * HEAP_ALIGN
-        heap_start = max(DEFAULT_HEAP_START, aligned)
-        if heap_start == DEFAULT_HEAP_START:
-            return
-        assert heap_line is not None, "runtime.wat sin la global $heap"
-        pages = -(-heap_start // PAGE_SIZE)
-        indent = INDENT * self._depth
-        self._lines[memory_line] = f'{indent}(memory (export "memory") {pages})'
-        self._lines[heap_line] = f"{indent}(global $heap (mut i32) (i32.const {heap_start}))"
+    def _heap_start(self) -> int:
+        """El heap empieza después de los literales: en 1024 o más allá (alineado) si no caben."""
+        return max(DEFAULT_HEAP_START, ceil_div(self._data_offset, HEAP_ALIGN) * HEAP_ALIGN)
 
-    def visitProgram(self, ctx: RustiQParser.ProgramContext):
+    def visitProgram(self, ctx: P.ProgramContext):
         for item in ctx.item():
             decl = item.constDecl()
             symbol = self.info.symbol.get(decl) if decl is not None else None
@@ -186,12 +204,12 @@ class Emitter(
         for item in ctx.item():
             self.visit(item)
 
-    def visitItem(self, ctx: RustiQParser.ItemContext):
+    def visitItem(self, ctx: P.ItemContext):
         # Structs y enums no emiten código por sí mismos; las constantes llegan después.
         if ctx.functionDecl() is not None:
             self.visit(ctx.functionDecl())
 
-    def visitFunctionDecl(self, ctx: RustiQParser.FunctionDeclContext):
+    def visitFunctionDecl(self, ctx: P.FunctionDeclContext):
         name = ctx.IDENT().getText()
         sig = self.info.functions[name]
         self._fn = FunctionCtx(name)
@@ -218,15 +236,14 @@ class Emitter(
         if sig.ret != UNIT:
             header += f" (result {wasm_type(sig.ret)})"
         self.emit(header)
-        self._depth += 1
-        for lname, ltype in self.fn.locals.items():
-            self.emit(f"(local {lname} {ltype})")
+        with self.indented():
+            for lname, ltype in self.fn.locals.items():
+                self.emit(f"(local {lname} {ltype})")
         self._lines.extend(body)
-        self._depth -= 1
         self.emit(")")
         self._fn = None
 
-    def _box_params(self, ctx: RustiQParser.FunctionDeclContext) -> None:
+    def _box_params(self, ctx: P.FunctionDeclContext) -> None:
         """Copia a una celda cada parámetro escalar con `&` aplicado, al entrar."""
         if ctx.parameterList() is None:
             return
@@ -238,7 +255,7 @@ class Emitter(
                 self.emit(f"local.get {self.local_name(symbol)}")
                 self.emit(f"{wasm_type(symbol.type)}.store")
 
-    def _param_names(self, ctx: RustiQParser.FunctionDeclContext, sig) -> list[str]:
+    def _param_names(self, ctx: P.FunctionDeclContext, sig) -> list[str]:
         """Nombre Wasm de cada parámetro: por uid si hay símbolo, si no por posición."""
         if ctx.parameterList() is None:
             return []
@@ -254,18 +271,18 @@ class Emitter(
     # `info.expr_type[sufijo]`. visitCallSuffix y visitFieldSuffix son de A,
     # visitIndexSuffix de B.
 
-    def visitPostfix(self, ctx: RustiQParser.PostfixContext):
-        primary = ctx.primary()
-        suffixes = ctx.children[1:]
-        if suffixes and isinstance(suffixes[0], RustiQParser.CallSuffixContext) and isinstance(
-            primary, RustiQParser.IdentPContext
-        ):
-            self.gen_call(primary, suffixes[0])
-            suffixes = suffixes[1:]
+    def visitPostfix(self, ctx: P.PostfixContext):
+        self.emit_postfix(ctx.primary(), ctx.children[1:])
+
+    def emit_postfix(self, primary, suffixes: list) -> None:
+        """Emite `primary` seguido de los sufijos dados (todos o solo los primeros)."""
+        call, suffixes = split_call(primary, suffixes)
+        if call is not None:
+            self.gen_call(primary, call)
         else:
             self.visit(primary)
         for suffix in suffixes:
             self.visit(suffix)
 
-    def visitConstDecl(self, ctx: RustiQParser.ConstDeclContext):
+    def visitConstDecl(self, ctx: P.ConstDeclContext):
         return None  # las constantes globales se expanden en cada uso
