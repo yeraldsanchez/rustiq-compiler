@@ -1,4 +1,4 @@
-"""Movimientos: estados, uso después de mover, ramas y ciclos (G1, G8, T4)."""
+"""Movimientos: estados, uso después de mover, ramas y ciclos."""
 
 from rustiq.errors import E_MOVE_WHILE_BORROWED, E_UNINITIALIZED, E_USE_AFTER_MOVE
 from rustiq.pipeline import compile_source

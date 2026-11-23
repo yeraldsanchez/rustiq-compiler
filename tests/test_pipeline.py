@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from rustiq import pipeline
-from tests.support import necesita_carril_b
+from tests.support import necesita_expresiones
 from rustiq.errors import (
     BACKEND,
     E_INTERNAL,
@@ -32,7 +32,7 @@ def _sin_wabt(monkeypatch):
 # --- compile_source ---------------------------------------------------------
 
 
-@necesita_carril_b
+@necesita_expresiones
 @pytest.mark.parametrize("rq", sorted(VALID_DIR.glob("*.rq")), ids=lambda p: p.stem)
 def test_programa_valido_produce_wasm(rq):
     result = pipeline.compile_source(rq.read_text(encoding="utf-8"))

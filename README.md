@@ -10,7 +10,7 @@ RustiQ es un compilador que toma un subconjunto de Rust y lo convierte en **WebA
 - **Seguridad al estilo Rust:** ownership, movimientos y préstamos (`&` / `&mut`) verificados en tiempo de compilación. Si usas un valor después de moverlo, el compilador te lo dice.
 - **Errores claros:** cada error indica la línea y la columna exactas y se subraya directamente en el editor.
 - **WebAssembly real:** el resultado es un módulo `.wasm` validado, junto con su versión legible en WAT.
-- **Editor en el navegador:** escribe, compila y mira la salida en la misma pantalla.
+- **Editor en el navegador:** escribe, compila y mira la salida en la misma pantalla. Tiene un riel lateral con paneles de archivos, esquema y ejemplos, pestañas, una pantalla de inicio con los archivos cerrados hace poco, arreglos rápidos para los errores comunes, ir a la definición (F12), referencias (Shift+F12) y renombrar (F2).
 
 ## 🧪 Un vistazo
 

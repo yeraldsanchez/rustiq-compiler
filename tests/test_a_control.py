@@ -135,7 +135,7 @@ def test_break_dentro_de_if_sin_ciclo():
 
 
 def test_if_no_produce_valor():
-    # P4: if es solo sentencia, sus ramas no pueden devolver un valor
+    # if es solo sentencia, sus ramas no pueden devolver un valor
     src = "fn main() {\n    if true { 1 } else { 2 }\n}"
     assert [c for c, *_ in error_codes(src)] == [E_TYPE_MISMATCH, E_TYPE_MISMATCH]
 

@@ -1,7 +1,4 @@
-"""Comprobación de tipos de expresiones y operadores (Carril B).
-
-Los operadores binarios los escribió B en `b/etapa3-refs-borrows`; A los pasó
-a main con su permiso.
+"""Comprobación de tipos de expresiones y operadores.
 
 Reglas de los operadores:
 - `+ - * /` entre dos `i32` o dos `f64`; `%` solo entre `i32` (Wasm no tiene

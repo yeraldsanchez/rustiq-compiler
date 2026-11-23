@@ -1,9 +1,13 @@
 """Qué es cada identificador del programa, para mostrarlo en el editor.
 
-Dueño: A (Yerald). No vuelve a analizar nada: lee lo que ya dejó el análisis
+No vuelve a analizar nada: lee lo que ya dejó el análisis
 en `SemanticInfo` (variables, parámetros y constantes) y recorre el árbol
 para las funciones, structs, enums y variantes, que se resuelven por nombre
 y no quedan en `info.symbol`.
+
+Cada pista lleva un `id`: todas las apariciones de un mismo nombre (su
+declaración y sus usos) comparten el mismo. Con eso el editor puede ir a la
+definición, listar las referencias y renombrar respetando los ámbitos.
 """
 
 from dataclasses import asdict, dataclass
@@ -39,6 +43,8 @@ class SymbolHint:
     type: str | None
     mutable: bool
     declaration: bool
+    # Igual para todas las apariciones del mismo nombre declarado.
+    id: str
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -59,15 +65,36 @@ def _name_token(ctx: ParserRuleContext):
     return ctx.IDENT().symbol
 
 
-def _hint(token, name: str, kind: SymbolKind, type_text: str | None, mutable: bool, declaration: bool) -> SymbolHint:
-    return SymbolHint(token.line, token.column + 1, len(token.text), name, kind, type_text, mutable, declaration)
+def _hint(
+    token, name: str, kind: SymbolKind, type_text: str | None, mutable: bool, declaration: bool, hint_id: str
+) -> SymbolHint:
+    return SymbolHint(
+        token.line, token.column + 1, len(token.text), name, kind, type_text, mutable, declaration, hint_id
+    )
+
+
+# Ids de lo que se resuelve por nombre. Las variables usan el `uid` del símbolo.
+def _function_id(name: str) -> str:
+    return f"fn:{name}"
+
+
+def _host_id(name: str) -> str:
+    return f"host:{name}"
+
+
+def _type_id(name: str) -> str:
+    return f"type:{name}"
+
+
+def _variant_id(enum: str, variant: str) -> str:
+    return f"variant:{enum}::{variant}"
 
 
 def _from_symbol(ctx: ParserRuleContext, symbol: Symbol) -> SymbolHint:
     type_text = str(symbol.type) if symbol.type is not None else None
     return _hint(
         _name_token(ctx), symbol.name, symbol.kind, type_text, symbol.mutable,
-        isinstance(ctx, _DECLARATIONS),
+        isinstance(ctx, _DECLARATIONS), f"sym:{symbol.uid}",
     )
 
 
@@ -101,9 +128,11 @@ def _type_name_hint(token, info: SemanticInfo, declaration: bool) -> SymbolHint 
     """Un nombre que puede ser struct o enum (por ejemplo, en un tipo)."""
     name = token.text
     if name in info.structs:
-        return _hint(token, name, SymbolKind.STRUCT, struct_text(info.structs[name]), False, declaration)
+        text = struct_text(info.structs[name])
+        return _hint(token, name, SymbolKind.STRUCT, text, False, declaration, _type_id(name))
     if name in info.enums:
-        return _hint(token, name, SymbolKind.ENUM, enum_text(info.enums[name]), False, declaration)
+        text = enum_text(info.enums[name])
+        return _hint(token, name, SymbolKind.ENUM, text, False, declaration, _type_id(name))
     return None
 
 
@@ -113,21 +142,45 @@ def _enum_path_hints(node, info: SemanticInfo) -> list[SymbolHint]:
     enum = info.enums.get(enum_token.text)
     if enum is None:
         return []
-    hints = [_hint(enum_token, enum.name, SymbolKind.ENUM, enum_text(enum), False, False)]
+    hints = [_hint(enum_token, enum.name, SymbolKind.ENUM, enum_text(enum), False, False, _type_id(enum.name))]
     if variant_token.text in enum.variants:
-        text = f"{enum.name}::{variant_text(enum, variant_token.text)}"
-        hints.append(_hint(variant_token, variant_token.text, SymbolKind.VARIANT, text, False, False))
+        hints.append(_variant_hint(variant_token, enum, declaration=False))
     return hints
+
+
+def _variant_hint(token, enum: EnumDef, declaration: bool) -> SymbolHint:
+    variant = token.text
+    text = f"{enum.name}::{variant_text(enum, variant)}"
+    return _hint(token, variant, SymbolKind.VARIANT, text, False, declaration, _variant_id(enum.name, variant))
+
+
+def _enum_decl_hints(node: P.EnumDeclContext, info: SemanticInfo) -> list[SymbolHint]:
+    """El nombre del enum y cada una de sus variantes, como declaraciones."""
+    hint = _type_name_hint(node.IDENT().symbol, info, declaration=True)
+    if hint is None:
+        return []
+    enum = info.enums[hint.name]
+    variants = [
+        _variant_hint(v.IDENT().symbol, enum, declaration=True)
+        for v in node.variantDecl()
+        if v.IDENT().getText() in enum.variants
+    ]
+    return [hint, *variants]
 
 
 def _hints_for_node(node, info: SemanticInfo) -> list[SymbolHint]:
     if isinstance(node, P.FunctionDeclContext):
         sig = info.functions.get(node.IDENT().getText())
-        return [_hint(node.IDENT().symbol, sig.name, SymbolKind.FUNC, signature(sig), False, True)] if sig else []
+        if sig is None:
+            return []
+        token = node.IDENT().symbol
+        return [_hint(token, sig.name, SymbolKind.FUNC, signature(sig), False, True, _function_id(sig.name))]
     if isinstance(node, P.PostfixContext):
         hint = _call_hint(node, info)
         return [hint] if hint else []
-    if isinstance(node, (P.StructDeclContext, P.EnumDeclContext)):
+    if isinstance(node, P.EnumDeclContext):
+        return _enum_decl_hints(node, info)
+    if isinstance(node, P.StructDeclContext):
         hint = _type_name_hint(node.IDENT().symbol, info, declaration=True)
         return [hint] if hint else []
     if isinstance(node, (P.NamedTContext, P.StructLiteralContext)):
@@ -163,5 +216,7 @@ def _call_hint(node: P.PostfixContext, info: SemanticInfo) -> SymbolHint | None:
     sig = info.functions.get(primary.IDENT().getText())
     if sig is None:
         return None
-    kind = SymbolKind.HOST if sig.name in _HOST_NAMES else SymbolKind.FUNC
-    return _hint(primary.IDENT().symbol, sig.name, kind, signature(sig), False, False)
+    token = primary.IDENT().symbol
+    if sig.name in _HOST_NAMES:
+        return _hint(token, sig.name, SymbolKind.HOST, signature(sig), False, False, _host_id(sig.name))
+    return _hint(token, sig.name, SymbolKind.FUNC, signature(sig), False, False, _function_id(sig.name))

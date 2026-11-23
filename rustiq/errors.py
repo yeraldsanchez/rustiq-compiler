@@ -1,7 +1,7 @@
-"""Contrato 1: formato único de errores.
+"""Formato único de errores.
 
 Todas las fases reportan igual. El editor, el servidor y las pruebas dependen
-de este formato. Un cambio aquí va en su propio PR.
+de este formato.
 """
 
 from dataclasses import asdict, dataclass

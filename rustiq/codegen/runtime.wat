@@ -41,7 +41,7 @@
 
 ;; Copia `n` bytes de `src` a `dst`, byte por byte.
 ;; Se usa para crear Strings a partir de sus literales. Arrays y tuplas
-;; no se copian: se mueven (G1).
+;; no se copian: se mueven.
 ;; Los bloques del bump allocator nunca se solapan, así que copiar hacia
 ;; adelante basta.
 (func $memcpy (param $dst i32) (param $src i32) (param $n i32)

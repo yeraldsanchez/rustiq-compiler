@@ -3,7 +3,11 @@
  *  en ese caso el editor funciona igual, solo que sin recordar nada. */
 
 export const KEYS = {
+  /** Versión anterior: un solo archivo. Se migra a `files`. */
   source: "rustiq.source",
+  files: "rustiq.files",
+  activeFile: "rustiq.activeFile",
+  closedFiles: "rustiq.closedFiles",
   liveErrors: "rustiq.liveErrors",
   layout: "rustiq.layout",
 } as const;
@@ -21,5 +25,13 @@ export function save(key: string, value: string): void {
     localStorage.setItem(key, value);
   } catch {
     // Sin almacenamiento no hay nada que hacer.
+  }
+}
+
+export function remove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Igual que arriba.
   }
 }

@@ -1,7 +1,4 @@
 """Enums y match: patrones, tipos de los brazos y exhaustividad.
-
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas; si necesita algo de
-otro mixin, llama su método público y nunca copia la lógica.
 """
 
 from rustiq.errors import (
@@ -158,7 +155,7 @@ class MatchMixin:
         return ok
 
 
-# --- Exhaustividad (decisión G10) ---------------------------------------------
+# --- Exhaustividad ---------------------------------------------
 
 
 def is_irrefutable(pattern: P.PatternContext) -> bool:

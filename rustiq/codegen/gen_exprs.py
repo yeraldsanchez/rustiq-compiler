@@ -1,9 +1,7 @@
 """Generación de código de literales, operadores y variables.
 
-Dueño: B (Byron). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos. `visitLiteral` y `visitAssignment` los
-implementó A con su permiso para cerrar movimientos. Los operadores son los de
-B en `b/etapa3-refs-borrows`, pasados por A, con cortocircuito en `&&` y `||`.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos. `&&` y `||` hacen
+cortocircuito.
 """
 
 from rustiq.codegen.gen_arrays import array_of

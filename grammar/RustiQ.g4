@@ -76,7 +76,7 @@ type
     | LBRACK type SEMI INT_LIT RBRACK                     # ArrayT
     | LPAREN type (COMMA type)+ COMMA? RPAREN             # TupleT
     | AMP MUT? type                                       # RefT
-    // El lexer lee "&&" como AND; aquí equivale a & (& [mut] type). Ver P10.
+    // El lexer lee "&&" como AND; aquí equivale a & (& [mut] type).
     | AND MUT? type                                       # RefRefT
     | IDENT                                               # NamedT
     ;

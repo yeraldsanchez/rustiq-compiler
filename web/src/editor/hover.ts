@@ -2,16 +2,10 @@
  *  última compilación. Variables, parámetros y constantes muestran su tipo;
  *  funciones, structs, enums y variantes, su declaración. */
 
-import { MapMode, StateEffect, StateField, type Text } from "@codemirror/state";
 import { hoverTooltip, type EditorView } from "@codemirror/view";
 
 import type { SymbolHint } from "../types";
-
-interface HintRange {
-  from: number;
-  to: number;
-  hint: SymbolHint;
-}
+import { symbolsField } from "./symbols";
 
 const KIND_LABEL: Record<SymbolHint["kind"], string> = {
   local: "variable local",
@@ -23,34 +17,6 @@ const KIND_LABEL: Record<SymbolHint["kind"], string> = {
   enum: "enum",
   variant: "variante",
 };
-
-export const setSymbols = StateEffect.define<HintRange[]>();
-
-/** Las posiciones se mueven con las ediciones hasta la próxima compilación.
- *  Si se borra el nombre, su pista desaparece. */
-const symbolsField = StateField.define<HintRange[]>({
-  create: () => [],
-  update(ranges, tr) {
-    for (const effect of tr.effects) if (effect.is(setSymbols)) return effect.value;
-    if (!tr.docChanged) return ranges;
-    return ranges.flatMap((range) => {
-      const from = tr.changes.mapPos(range.from, 1, MapMode.TrackDel);
-      const to = tr.changes.mapPos(range.to, -1, MapMode.TrackDel);
-      return from === null || to === null || to <= from ? [] : [{ ...range, from, to }];
-    });
-  },
-});
-
-/** Convierte las posiciones del compilador (línea y columna desde 1). */
-export function toRanges(doc: Text, hints: SymbolHint[]): HintRange[] {
-  return hints.flatMap((hint) => {
-    if (hint.line < 1 || hint.line > doc.lines) return [];
-    const line = doc.line(hint.line);
-    const from = line.from + hint.column - 1;
-    const to = from + hint.length;
-    return to <= line.to ? [{ from, to, hint }] : [];
-  });
-}
 
 /** Cómo se escribiría la declaración: `let mut x: i32`, `fn suma(...)`. */
 function signatureText(hint: SymbolHint): string {
@@ -88,7 +54,20 @@ function tooltipDom(hint: SymbolHint): HTMLElement {
   detail.className = "cm-symbol-detail";
   detail.textContent = detailText(hint);
   dom.append(code, detail);
+  // Las funciones del host no tienen declaración en el programa.
+  if (hint.kind !== "host") {
+    const keys = document.createElement("div");
+    keys.className = "cm-symbol-keys";
+    keys.append(...shortcut("F12", "definición"), ...shortcut("⇧F12", "referencias"), ...shortcut("F2", "renombrar"));
+    dom.append(keys);
+  }
   return dom;
+}
+
+function shortcut(key: string, label: string): Node[] {
+  const kbd = document.createElement("kbd");
+  kbd.textContent = key;
+  return [kbd, document.createTextNode(` ${label}`)];
 }
 
 const symbolHover = hoverTooltip((view: EditorView, pos: number, side: -1 | 1) => {

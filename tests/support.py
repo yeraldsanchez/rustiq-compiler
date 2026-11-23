@@ -1,9 +1,10 @@
-"""Apoyo para probar el carril A sin esperar el código de B (Byron).
+"""Apoyo para las pruebas: compilar, analizar y ejecutar programas cortos.
 
 `StandInExprs` y `StandInGen` implementan lo mínimo de literales, identificadores,
-operadores, `let` y asignación simple, solo dentro de las pruebas. Cuando el
-carril B integre lo suyo, `B_READY` pasa a True y las pruebas que dependen de
-programas completos se activan solas.
+operadores, `let` y asignación simple, para probar cada parte del análisis y
+del codegen por separado. Las pruebas que necesitan programas completos se
+marcan con `necesita_expresiones` y solo corren si el compilador ya tiene
+literales y operadores en ambos visitors.
 
 Convención que cumple todo `visitX` de expresión del Analyzer: devuelve su Type.
 En el Emitter deja su valor en la pila de Wasm.
@@ -22,14 +23,14 @@ from rustiq.types import BOOL, CHAR, F64, I32
 
 from rustiq.generated.RustiQVisitor import RustiQVisitor
 
-# True cuando B implementa literales y operadores en ambos visitors (el visitor
-# generado ya trae versiones vacías). Basta con mirar literales y sumas.
-B_READY = all(
+# True cuando hay literales y operadores en ambos visitors (el visitor generado
+# ya trae versiones vacías). Basta con mirar literales y sumas.
+EXPRESIONES_LISTAS = all(
     getattr(visitor, rule) is not getattr(RustiQVisitor, rule)
     for visitor in (Analyzer, Emitter)
     for rule in ("visitLiteral", "visitAdditive")
 )
-necesita_carril_b = pytest.mark.skipif(not B_READY, reason="espera las expresiones del carril B")
+necesita_expresiones = pytest.mark.skipif(not EXPRESIONES_LISTAS, reason="faltan literales u operadores")
 
 PROGRAMA_MINIMO = "fn auxiliar() {}\nfn main() { auxiliar() }"
 

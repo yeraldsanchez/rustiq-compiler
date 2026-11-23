@@ -1,4 +1,4 @@
-"""server/app.py: POST /compile según el contrato 6."""
+"""server/app.py: la forma de la respuesta de POST /compile."""
 
 import base64
 

@@ -1,7 +1,6 @@
 """Generación de código de control de flujo y bloques.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 
 Un bloque no abre un `block` de Wasm: sus sentencias se emiten en secuencia y la
 expresión final deja su valor en la pila. Los ciclos usan `block` + `loop` con

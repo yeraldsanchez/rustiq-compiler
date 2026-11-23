@@ -17,13 +17,6 @@
       </div>
 
       <div class="actions">
-        <label class="field">
-          <span class="field-label">Ejemplo</span>
-          <select class="select" id="examples">
-            <option value="" selected disabled hidden>Elegir…</option>
-          </select>
-        </label>
-        <span class="divider" aria-hidden="true"></span>
         <button class="btn" id="btn-compile" title="Compilar (Ctrl+B)">Compilar</button>
         <button class="btn btn-primary" id="btn-run" title="Compilar y ejecutar (Ctrl+Enter)">Ejecutar</button>
         <button class="btn btn-ghost" id="btn-stop" disabled title="Detener la ejecución">Detener</button>
@@ -35,15 +28,74 @@
       <button class="btn btn-sm" id="btn-retry">Reintentar</button>
     </div>
 
-    <section class="tile editor" aria-label="Editor">
-      <div class="tile-head">
-        <span class="filename">main.rq</span>
-        <div class="tile-tools">
-          <button class="toggle" id="btn-live" aria-pressed="false" title="Compilar al dejar de escribir y marcar los errores">Errores en vivo</button>
-          <span class="tile-meta" id="cursor-pos">Ln 1, Col 1</span>
+    <nav class="tile rail" aria-label="Paneles">
+      <button class="rail-btn" type="button" data-panel="files" aria-pressed="false" aria-controls="side" title="Archivos (Ctrl+Shift+E)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>
+        <span class="sr-only">Archivos</span>
+      </button>
+      <button class="rail-btn" type="button" data-panel="outline" aria-pressed="false" aria-controls="side" title="Esquema (Ctrl+Shift+O)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4M4 12h4M4 19h4M11 5h9M11 12h9M11 19h9"/></svg>
+        <span class="sr-only">Esquema</span>
+      </button>
+      <button class="rail-btn" type="button" data-panel="examples" aria-pressed="false" aria-controls="side" title="Ejemplos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        <span class="sr-only">Ejemplos</span>
+      </button>
+      <span class="rail-spacer" aria-hidden="true"></span>
+      <button class="rail-btn" type="button" id="rail-live" aria-pressed="false" title="Errores en vivo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
+        <span class="sr-only">Errores en vivo</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-keys" aria-haspopup="dialog" aria-expanded="false" title="Atajos de teclado">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v10H3zM7 11h1M11 11h1M15 11h2M7 14h10"/></svg>
+        <span class="sr-only">Atajos de teclado</span>
+      </button>
+    </nav>
+
+    <aside class="tile side" id="side" aria-label="Panel lateral" hidden>
+      <div class="tile-head side-head">
+        <h2 class="tile-title" id="side-title">Archivos</h2>
+        <div class="tile-tools" id="side-tools">
+          <button class="icon-btn" type="button" id="btn-side-new" title="Archivo nuevo (Alt+N)" aria-label="Archivo nuevo">+</button>
+          <button class="icon-btn" type="button" id="btn-side-open" title="Abrir desde el disco (Ctrl+O)" aria-label="Abrir desde el disco">↑</button>
         </div>
       </div>
+      <div class="side-body" id="side-body"></div>
+      <div class="side-foot">
+        <button class="switch-row" type="button" id="live-switch" role="switch" aria-checked="false">
+          <span>Errores en vivo</span>
+          <span class="switch" aria-hidden="true"></span>
+        </button>
+        <p class="side-hint">Compila al dejar de escribir y marca los errores.</p>
+      </div>
+      <input type="file" id="file-input" accept=".rq,.rs,.txt,text/plain" hidden>
+    </aside>
+
+    <section class="tile editor" aria-label="Editor">
+      <div class="tile-head editor-head" id="editor-head">
+        <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Archivos abiertos"></div>
+        <button class="file-tab-new" id="btn-new-file" type="button" title="Archivo nuevo (Alt+N)" aria-label="Archivo nuevo">+</button>
+      </div>
       <div class="editor-host" id="editor"></div>
+      <div class="welcome" id="welcome" hidden>
+        <div class="welcome-box">
+          <h2 class="welcome-title"><span class="brand-mark" aria-hidden="true"></span>Sin archivos abiertos</h2>
+          <p class="welcome-text">Empieza un programa, abre uno tuyo o mira un ejemplo.</p>
+          <ul class="welcome-actions">
+            <li><button type="button" id="welcome-new">Archivo nuevo <kbd>Alt+N</kbd></button></li>
+            <li><button type="button" id="welcome-open">Abrir desde el disco… <kbd>Ctrl+O</kbd></button></li>
+            <li><button type="button" id="welcome-examples">Abrir un ejemplo</button></li>
+          </ul>
+          <div class="welcome-recent" id="welcome-recent" hidden>
+            <h3 class="welcome-label">Cerrados hace poco</h3>
+            <ul id="recent-list"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="editor-status" id="editor-status">
+        <span>Rust · 4 espacios</span>
+        <span id="cursor-pos">Ln 1, Col 1</span>
+      </div>
       <div class="splitter splitter-x" id="split-x" role="separator" aria-orientation="vertical" aria-label="Cambiar el ancho del editor" title="Arrastra para cambiar el ancho. Doble clic restablece."></div>
     </section>
 

@@ -27,6 +27,7 @@
   --num: #b99be0;
 
   --gap: 8px;
+  --side-width: 240px;
   --pad: 14px;
   --head-h: 38px;
   --press: 2px 2px 0 0 #000;
@@ -83,30 +84,52 @@ code {
 
 .app {
   display: grid;
-  /* El editor ocupa una columna de ancho variable; la derecha se reparte en
-     5 para los indicadores. Los separadores (src/ui/splitters.ts) cambian
-     las variables. */
-  grid-template-columns: minmax(0, var(--editor-width, 58%)) repeat(5, minmax(0, 1fr));
+  /* Riel, editor y 5 columnas para la derecha. El editor y la derecha se
+     reparten en fr lo que deja el riel (src/ui/splitters.ts). Con el panel
+     lateral abierto se suma su columna (.side-open). */
+  grid-template-columns: 44px minmax(0, var(--editor-fr, 0.58fr)) repeat(5, minmax(0, var(--right-fr, 0.084fr)));
   grid-template-rows: auto auto auto minmax(0, var(--output-fr, 0.6fr)) minmax(0, var(--errors-fr, 0.4fr));
   grid-template-areas:
-    "top  top  top  top  top  top"
-    "ban  ban  ban  ban  ban  ban"
-    "ed   s1   s1   s2   s2   s3"
-    "ed   out  out  out  out  out"
-    "ed   err  err  err  err  err";
+    "top  top top top top top top"
+    "ban  ban ban ban ban ban ban"
+    "rail ed  s1  s1  s2  s2  s3"
+    "rail ed  out out out out out"
+    "rail ed  err err err err err";
   gap: var(--gap);
   height: 100vh;
   padding: var(--gap);
 }
 
+.app.side-open {
+  grid-template-columns: 44px var(--side-width) minmax(0, var(--editor-fr, 0.58fr)) repeat(5, minmax(0, var(--right-fr, 0.084fr)));
+  grid-template-areas:
+    "top  top  top top top top top top"
+    "ban  ban  ban ban ban ban ban ban"
+    "rail side ed  s1  s1  s2  s2  s3"
+    "rail side ed  out out out out out"
+    "rail side ed  err err err err err";
+}
+
 .topbar     { grid-area: top; }
 .banner     { grid-area: ban; }
+.rail       { grid-area: rail; }
+.side       { grid-area: side; }
 .editor     { grid-area: ed; }
 .output     { grid-area: out; }
 .errors     { grid-area: err; }
 .stat-state { grid-area: s1; }
 .stat-time  { grid-area: s2; }
 .stat-size  { grid-area: s3; }
+
+/* Solo para lectores de pantalla. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* --- Tiles ---------------------------------------------------------------- */
 
@@ -193,56 +216,6 @@ code {
   gap: 8px;
 }
 
-.divider {
-  width: 1px;
-  height: 22px;
-  margin: 0 4px;
-  background: var(--line);
-}
-
-.field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.field-label {
-  color: var(--muted);
-  font-size: 12.5px;
-}
-
-.select {
-  appearance: none;
-  -webkit-appearance: none;
-  height: 32px;
-  background-color: var(--tile-2);
-  /* Flecha propia: la nativa no deja controlar su separación del borde. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%238a8880'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  color: var(--text);
-  border: 1px solid var(--line-strong);
-  padding: 0 34px 0 10px;
-  font: 12.5px var(--font-mono);
-  cursor: pointer;
-}
-
-.select:hover,
-.select:focus {
-  border-color: var(--accent);
-}
-
-.select optgroup {
-  background: var(--tile-2);
-  color: var(--muted);
-  font-style: normal;
-}
-
-.select option {
-  background: var(--tile-2);
-  color: var(--text);
-}
-
 /* --- Botones -------------------------------------------------------------- */
 
 .btn {
@@ -298,7 +271,6 @@ code {
 }
 
 /* El anillo de foco por defecto es redondeado: se reemplaza por uno recto. */
-.select:focus,
 .btn:focus,
 .tab:focus {
   outline: none;
@@ -330,14 +302,459 @@ code {
 
 /* --- Editor --------------------------------------------------------------- */
 
-.filename {
-  font: 500 12.5px var(--font-mono);
-  color: var(--text);
-  padding-bottom: 1px;
-  border-bottom: 2px solid var(--accent);
+/* Pestañas de archivos: mismo subrayado de 2px que las pestañas de salida.
+   La cabecera del editor solo lleva las pestañas y el botón de archivo nuevo. */
+.editor-head {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.file-tabs {
+  display: flex;
   align-self: stretch;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 16px;
+  overflow-x: auto;
+}
+
+.file-tab {
+  flex: none;
   display: flex;
   align-items: center;
+  gap: 4px;
+  padding-top: 1px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font: 500 12.5px var(--font-mono);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.file-tab:hover {
+  color: var(--text-2);
+}
+
+.file-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.file-tab:focus {
+  outline: none;
+}
+
+.file-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.file-tab-close {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  font: 14px/1 var(--font-ui);
+  cursor: pointer;
+  /* Solo se ve en la pestaña activa o al pasar el mouse, como en un IDE. */
+  opacity: 0;
+}
+
+.file-tab:hover .file-tab-close,
+.file-tab.is-active .file-tab-close,
+.file-tab:focus-visible .file-tab-close {
+  opacity: 1;
+}
+
+.file-tab-close:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.file-tab-input {
+  height: 22px;
+  padding: 0 6px;
+  background: var(--tile-2);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  font: 500 12.5px var(--font-mono);
+  outline: none;
+}
+
+.file-tab-new {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font: 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.file-tab-new:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.file-tab-new:focus {
+  outline: none;
+}
+
+.file-tab-new:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Barra de estado al pie del editor, como en un IDE. */
+.editor-status {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  height: 26px;
+  padding: 0 var(--pad);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 11.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Inicio sin archivos -------------------------------------------------- */
+
+.welcome {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: auto;
+}
+
+.welcome-box {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.welcome-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 600 16px var(--font-ui);
+}
+
+.welcome-title .brand-mark {
+  width: 12px;
+  height: 12px;
+}
+
+.welcome-text {
+  color: var(--muted);
+}
+
+.welcome-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.welcome-actions button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  font: 13.5px var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  transition: padding-left 60ms ease-out;
+}
+
+.welcome-actions button::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+
+.welcome-actions button:hover,
+.welcome-actions button:focus-visible {
+  outline: none;
+  background: var(--hover);
+  box-shadow: inset 2px 0 0 var(--accent);
+  padding-left: 12px;
+}
+
+kbd {
+  font: 11px var(--font-mono);
+  color: var(--text-2);
+  border: 1px solid var(--line-strong);
+  padding: 0 5px;
+}
+
+.welcome-actions kbd {
+  margin-left: auto;
+}
+
+.welcome-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.welcome-label {
+  margin: 0;
+  color: var(--muted);
+  font: 600 11px var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.welcome-recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.welcome-recent li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.welcome-recent-file {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--fn);
+  font: 12.5px var(--font-mono);
+  cursor: pointer;
+}
+
+.welcome-recent-file:hover,
+.welcome-recent-file:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.welcome-when {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* --- Riel de actividad ---------------------------------------------------- */
+
+.rail {
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.rail-spacer {
+  flex: 1;
+}
+
+.rail-btn {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  cursor: pointer;
+}
+
+.rail-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+}
+
+.rail-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.rail-btn:focus {
+  outline: none;
+}
+
+.rail-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Panel abierto: la barra de óxido pegada al borde del riel. */
+.rail-btn[data-panel][aria-pressed="true"] {
+  color: var(--text);
+}
+
+.rail-btn[data-panel][aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--accent);
+}
+
+/* Errores en vivo encendidos: un punto verde. */
+#rail-live[aria-pressed="true"] {
+  color: var(--text);
+}
+
+#rail-live[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--ok);
+}
+
+/* --- Panel lateral -------------------------------------------------------- */
+
+.side-head .tile-tools {
+  gap: 2px;
+}
+
+.icon-btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  font: 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.icon-btn:focus {
+  outline: none;
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.side-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-body .list-view {
+  flex: 1;
+  min-height: 0;
+}
+
+.side-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px var(--pad) 12px;
+  border-top: 1px solid var(--line);
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  color: var(--text-2);
+  border: 0;
+  font: 500 12.5px var(--font-ui);
+  cursor: pointer;
+}
+
+.switch-row:hover {
+  color: var(--text);
+}
+
+.switch-row:focus {
+  outline: none;
+}
+
+.switch-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  border: 1px solid var(--line-strong);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  background: var(--muted);
+  transition: left 80ms ease-out;
+}
+
+.switch-row[aria-checked="true"] .switch {
+  border-color: var(--accent);
+}
+
+.switch-row[aria-checked="true"] .switch::after {
+  left: 15px;
+  background: var(--accent);
+}
+
+.side-hint {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 .editor-host {
@@ -418,52 +835,6 @@ code {
 
 .resize-x * { cursor: col-resize !important; }
 .resize-y * { cursor: row-resize !important; }
-
-/* --- Errores en vivo ------------------------------------------------------ */
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 24px;
-  padding: 0 8px;
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  font: 500 12px var(--font-ui);
-  cursor: pointer;
-}
-
-.toggle::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border: 1px solid currentColor;
-}
-
-.toggle:hover {
-  color: var(--text);
-  border-color: var(--line-strong);
-}
-
-.toggle[aria-pressed="true"] {
-  color: var(--text);
-  border-color: var(--accent);
-}
-
-.toggle[aria-pressed="true"]::before {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.toggle:focus {
-  outline: none;
-}
-
-.toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
 /* --- Indicadores ---------------------------------------------------------- */
 
@@ -632,24 +1003,371 @@ code {
   font: 11.5px var(--font-mono);
 }
 
+/* Arreglos rápidos: botones pequeños con la marca de óxido. */
+.error-fixes {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.error-fix {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--tile-2);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+  transition: transform 60ms ease-out, box-shadow 60ms ease-out;
+}
+
+.error-fix::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+
+.error-fix code {
+  color: var(--fn);
+}
+
+.error-fix:hover {
+  border-color: var(--accent);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--press);
+}
+
+.error-fix:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.error-fix:focus {
+  outline: none;
+}
+
+.error-fix:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Listas flotantes (referencias, atajos) ------------------------------- */
+
+.picker {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-height: min(62vh, 480px);
+  background: var(--tile-2);
+  border: 1px solid var(--line-strong);
+  box-shadow: 4px 4px 0 0 #000;
+}
+
+/* Lista con búsqueda: dentro de las flotantes y del panel lateral. */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.picker .list-view {
+  max-height: inherit;
+}
+
+.list-search {
+  flex: none;
+  height: 36px;
+  padding: 0 var(--pad);
+  background: var(--tile-2);
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  font: 12.5px var(--font-mono);
+  outline: none;
+}
+
+.picker .list-search {
+  background: var(--tile);
+}
+
+.list-search:focus {
+  border-bottom-color: var(--accent);
+}
+
+.list-search::placeholder {
+  color: var(--muted);
+}
+
+.list-items {
+  flex: 1;
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow: auto;
+  outline: none;
+}
+
+.list-group {
+  padding: 10px var(--pad) 4px;
+  color: var(--muted);
+  font: 600 11px var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list-group:first-child {
+  padding-top: 6px;
+}
+
+.list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 1px 10px;
+  padding: 5px var(--pad);
+  cursor: pointer;
+}
+
+/* El resaltado del teclado solo se ve si la lista tiene el foco o el mouse
+   está encima: en el panel lateral no queda una fila marcada sin razón. */
+.list-item:hover,
+.picker .list-item[aria-selected="true"],
+.list-view:focus-within .list-item[aria-selected="true"] {
+  background: var(--hover);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.list-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.list-title {
+  color: var(--text-2);
+  font: 13px/1.4 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-item:hover .list-title,
+.list-item[aria-selected="true"] .list-title,
+.list-item.is-current .list-title {
+  color: var(--text);
+}
+
+.list-code .list-title {
+  font: 12.5px/1.5 var(--font-mono);
+}
+
+/* El elemento actual (el archivo abierto) lleva el cuadro de óxido. */
+.list-item.is-current .list-title::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 8px 1px 0;
+  background: var(--accent);
+}
+
+.list-badge {
+  flex: none;
+  width: 12px;
+  text-align: center;
+  font: 700 11px var(--font-mono);
+}
+
+.list-badge.is-fn    { color: var(--fn); }
+.list-badge.is-type  { color: var(--ty); }
+.list-badge.is-enum  { color: var(--num); }
+.list-badge.is-const { color: var(--kw); }
+
+.list-meta {
+  color: var(--muted);
+  font: 11.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.list-meta.is-error  { color: var(--error); }
+
+/* En el panel lateral no cabe el código del error junto al título: va en
+   su propia línea, entre el título y la descripción. */
+.side .list-meta.is-error {
+  grid-column: 1 / -1;
+  font-size: 10.5px;
+}
+.list-meta.is-accent { color: var(--accent); }
+
+.list-action {
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  font: 14px/1 var(--font-ui);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.list-item:hover .list-action,
+.list-item.is-current .list-action {
+  opacity: 1;
+}
+
+.list-action:hover {
+  color: var(--text);
+  background: var(--tile-2);
+}
+
+.list-detail {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font: 12px/1.45 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-code .list-detail {
+  font: 11.5px/1.5 var(--font-mono);
+}
+
+.list-empty {
+  padding: 12px var(--pad);
+  color: var(--muted);
+  font: 13px var(--font-ui);
+}
+
+/* --- Renombrar ------------------------------------------------------------ */
+
+.inline-prompt {
+  position: fixed;
+  z-index: 55;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--tile-2);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--press);
+}
+
+.inline-prompt-title {
+  color: var(--muted);
+  font: 12px var(--font-ui);
+}
+
+.inline-prompt-input {
+  height: 28px;
+  padding: 0 8px;
+  background: var(--tile);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  font: 13px var(--font-mono);
+  outline: none;
+}
+
+.inline-prompt-input:focus {
+  border-color: var(--accent);
+}
+
+.inline-prompt-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.inline-prompt-message {
+  color: var(--muted);
+  font: 11.5px/1.45 var(--font-ui);
+}
+
+.inline-prompt-message.is-error {
+  color: var(--error);
+}
+
+/* --- Avisos --------------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  max-width: min(440px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px var(--pad);
+  background: var(--tile-2);
+  color: var(--text-2);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  box-shadow: 4px 4px 0 0 #000;
+  font: 13px/1.45 var(--font-ui);
+  animation: toast-in 140ms ease-out;
+}
+
+@keyframes toast-in {
+  from { transform: translateY(6px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
 /* --- Pantallas angostas: todo en una columna ------------------------------ */
 
 @media (max-width: 900px) {
-  .app {
+  .app,
+  .app.side-open {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: auto;
     grid-template-areas:
-      "top top top"
-      "ban ban ban"
-      "s1  s2  s3"
-      "ed  ed  ed"
-      "out out out"
-      "err err err";
+      "top  top  top"
+      "ban  ban  ban"
+      "s1   s2   s3"
+      "rail rail rail"
+      "side side side"
+      "ed   ed   ed"
+      "out  out  out"
+      "err  err  err";
     height: auto;
   }
 
+  /* El riel pasa a ser una fila de íconos sobre el editor. */
+  .rail {
+    flex-direction: row;
+    padding: 0 6px;
+  }
+
+  .rail-btn[data-panel][aria-pressed="true"]::before {
+    left: 6px;
+    right: 6px;
+    top: auto;
+    bottom: -1px;
+    width: auto;
+    height: 2px;
+  }
+
+  .side { max-height: 50vh; }
+
   .brand-tag,
-  .divider,
   .splitter { display: none; }
 
   .banner {

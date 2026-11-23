@@ -15,7 +15,7 @@ def _compile_source():
 def test_valido(rq):
     if not rq.with_suffix(".out").exists():
         pytest.skip("sin .out todavía")
-    from rustiq.host import run_wasm  # B (Byron)
+    from rustiq.host import run_wasm
 
     try:
         runner.check_valid(rq, _compile_source(), run_wasm)

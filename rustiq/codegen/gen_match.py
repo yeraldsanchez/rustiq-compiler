@@ -1,7 +1,6 @@
 """Generación de código de enums y match.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas. Lee `SemanticInfo` y
-nunca vuelve a inferir tipos.
+Lee `SemanticInfo` y nunca vuelve a inferir tipos.
 
 Layout (docs/memoria.md): un enum es un puntero a `[tag][payload...]`. El tag
 ocupa la ranura 0 completa y cada dato del payload una ranura desde la 1.

@@ -1,7 +1,5 @@
 """Funciones, constantes globales y llamadas: declaraciones y tipos.
 
-Dueño: A (Yerald). Implementa solo los `visitX` de sus reglas; si necesita algo de
-otro mixin, llama su método público y nunca copia la lógica.
 
 El programa se analiza en pasadas para que el orden de las declaraciones no
 importe: tipos, firmas, constantes y, al final, los cuerpos.
@@ -96,7 +94,7 @@ class ItemsMixin:
     # --- Tipos ----------------------------------------------------------------
 
     def resolve_type(self, ctx: P.TypeContext) -> Type:
-        """Convierte un nodo `type` del árbol en un `Type` del contrato 2."""
+        """Convierte un nodo `type` del árbol en un `Type` (`rustiq/types.py`)."""
         if isinstance(ctx, P.PrimitiveTContext):
             return PRIMITIVES[ctx.primitiveType().getText()]
         if isinstance(ctx, P.StringTContext):
@@ -108,7 +106,7 @@ class ItemsMixin:
         if isinstance(ctx, P.RefTContext):
             return RefT(self.resolve_type(ctx.type_()), ctx.MUT() is not None)
         if isinstance(ctx, P.RefRefTContext):
-            # `&&T` es `&(&T)` y `&&mut T` es `&(&mut T)` (P10)
+            # `&&T` es `&(&T)` y `&&mut T` es `&(&mut T)`
             return RefT(RefT(self.resolve_type(ctx.type_()), ctx.MUT() is not None), False)
         name = ctx.IDENT().getText()
         if name not in self.type_names:

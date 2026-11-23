@@ -1,4 +1,4 @@
-"""Contrato 7: visitor principal del análisis semántico.
+"""Visitor principal del análisis semántico.
 
 Hereda un mixin por archivo. Cada mixin implementa solo los `visitX` de sus
 reglas. Esta clase aporta lo común: `info`, `errors` y `error()`.
@@ -74,9 +74,9 @@ class Analyzer(
     # Convención: todo `visitX` de expresión devuelve su `Type` (None si ya hubo
     # un error que lo impide). Cada sufijo recibe el tipo del operando en
     # `info.expr_type[sufijo]` y devuelve el tipo del resultado.
-    #   - visitCallSuffix: A (solo llamadas por nombre se resuelven aquí)
-    #   - visitFieldSuffix: A
-    #   - visitIndexSuffix: B
+    #   - visitCallSuffix: más abajo en este archivo (solo llamadas por nombre)
+    #   - visitFieldSuffix: `check_structs.py`
+    #   - visitIndexSuffix: `check_arrays.py`
 
     def visitPostfix(self, ctx: P.PostfixContext):
         primary = ctx.primary()

@@ -1,6 +1,4 @@
-"""Servidor del editor: expone el compilador por HTTP. Dueño: A (Yerald).
-
-Contrato 6 del plan:
+"""Servidor del editor: expone el compilador por HTTP.
 
     POST /compile  { "source": "..." }
     → { "ok": true,  "errors": [], "wat": "...", "wasm_base64": "...", "symbols": [...] }
@@ -56,6 +54,7 @@ class SymbolOut(BaseModel):
     type: str | None
     mutable: bool
     declaration: bool
+    id: str
 
 
 class CompileResponse(BaseModel):

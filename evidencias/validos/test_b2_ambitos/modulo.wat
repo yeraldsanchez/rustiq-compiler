@@ -9,8 +9,8 @@
   ;;   [0, fin de los literales)  datos estáticos: los literales de String (segmentos `data`)
   ;;   [inicio del heap, ...)     heap, crece hacia arriba y nunca se libera
   ;; El heap empieza en 1024, o justo después de los literales (redondeado a 8)
-  ;; si ocupan más. El Emitter reescribe el valor inicial de $heap y el tamaño
-  ;; inicial de la memoria (Emitter._place_heap); 1024 es el valor por defecto.
+  ;; si ocupan más. El Emitter cambia el valor inicial de $heap y el tamaño
+  ;; inicial de la memoria (Emitter._heap_start); 1024 es el valor por defecto.
   
   ;; Siguiente dirección libre del heap. Solo avanza.
   (global $heap (mut i32) (i32.const 1024))
@@ -48,7 +48,7 @@
   
   ;; Copia `n` bytes de `src` a `dst`, byte por byte.
   ;; Se usa para crear Strings a partir de sus literales. Arrays y tuplas
-  ;; no se copian: se mueven (G1).
+  ;; no se copian: se mueven.
   ;; Los bloques del bump allocator nunca se solapan, así que copiar hacia
   ;; adelante basta.
   (func $memcpy (param $dst i32) (param $src i32) (param $n i32)
