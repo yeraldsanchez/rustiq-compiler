@@ -1,0 +1,4 @@
+// ERROR sintactico E_SYNTAX 3:13
+fn main() {
+    let x = if true { 1 } else { 2 };
+}

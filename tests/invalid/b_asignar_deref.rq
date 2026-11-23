@@ -1,0 +1,6 @@
+// ERROR sintactico E_SYNTAX 5:8
+fn main() {
+    let mut x = 1;
+    let r = &mut x;
+    *r = 2;
+}
