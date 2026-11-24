@@ -59,7 +59,9 @@ def test_cors_permite_otro_origen(client):
 
 
 def test_sirve_la_carpeta_web(client):
-    assert client.get("/hola.html").status_code == 200
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "<title>RustiQ</title>" in resp.text
 
 
 def test_devuelve_simbolos(client):
