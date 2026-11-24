@@ -13,7 +13,7 @@ import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from antlr4 import CommonTokenStream, InputStream
+from antlr4 import CommonTokenStream, InputStream, PredictionMode
 from antlr4.error.ErrorListener import ErrorListener
 from wasmtime import Engine, Module, WasmtimeError
 from wasmtime import wat2wasm as wasmtime_wat2wasm
@@ -190,6 +190,11 @@ def parse_source(source: str):
     for recognizer, listener in ((lexer, lex_errors), (parser, syntax_errors)):
         recognizer.removeErrorListeners()
         recognizer.addErrorListener(listener)
+
+    # SLL en vez del LL completo: con LL, los bloques sueltos anidados
+    # (`{ { ... } }`) cuestan tiempo superlineal (300 niveles, ~45 s); con SLL,
+    # ~1 s. La gramática no necesita contexto completo para decidir.
+    parser._interp.predictionMode = PredictionMode.SLL
 
     tokens.fill()
     token_errors = [_error_token(t) for t in tokens.tokens if t.type in ERROR_TOKENS]
