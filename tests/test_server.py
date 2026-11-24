@@ -67,3 +67,16 @@ def test_devuelve_simbolos(client):
     simbolos = resp.json()["symbols"]
     assert {"name": "x", "kind": "local", "type": "i32"}.items() <= simbolos[1].items()
     assert simbolos[1]["line"] == 2 and simbolos[1]["column"] == 9
+
+
+@pytest.mark.parametrize("peticion", [
+    lambda c: c.post("/compile", json={"source": PROGRAMA_MINIMO}),
+    lambda c: c.get("/"),
+])
+def test_cabeceras_de_seguridad(client, peticion):
+    resp = peticion(client)
+    assert resp.headers["X-Content-Type-Options"] == "nosniff"
+    assert resp.headers["X-Frame-Options"] == "DENY"
+    csp = resp.headers["Content-Security-Policy"]
+    assert "'wasm-unsafe-eval'" in csp
+    assert "frame-ancestors 'none'" in csp

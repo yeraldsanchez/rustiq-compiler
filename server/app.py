@@ -17,7 +17,7 @@ se regenera con `npm run build` dentro de `web/`. Se levanta con:
 import base64
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -26,6 +26,29 @@ from rustiq.pipeline import compile_source
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web" / "dist"
 MAX_SOURCE_CHARS = 100_000
+
+# Cabeceras de seguridad para todas las respuestas (editor y API).
+# - 'wasm-unsafe-eval': el worker instancia el módulo compilado.
+# - style-src 'unsafe-inline': CodeMirror inyecta sus estilos en tiempo de ejecución.
+# - frame-ancestors 'none': nadie puede incrustar el editor en un iframe.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "worker-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+])
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+}
 
 
 class CompileRequest(BaseModel):
@@ -70,6 +93,14 @@ app = FastAPI(title="RustiQ")
 # Permite abrir el editor desde otro origen (otro puerto o file://) mientras se
 # desarrolla. La API no usa cookies ni credenciales.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["POST"], allow_headers=["*"])
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
 
 
 @app.post("/compile", response_model=CompileResponse)
