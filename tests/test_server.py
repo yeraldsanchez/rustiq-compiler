@@ -49,13 +49,35 @@ def test_source_demasiado_largo(client):
     assert resp.status_code == 422
 
 
-def test_cors_permite_otro_origen(client):
+def test_sin_cors_otro_origen_no_recibe_permiso(client):
     resp = client.options(
         "/compile",
-        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"},
+        headers={"Origin": "https://otro-sitio.example", "Access-Control-Request-Method": "POST"},
     )
-    assert resp.status_code == 200
-    assert resp.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-origin" not in resp.headers
+    resp = client.post(
+        "/compile", json={"source": PROGRAMA_MINIMO}, headers={"Origin": "https://otro-sitio.example"}
+    )
+    assert "access-control-allow-origin" not in resp.headers
+
+
+def test_cors_con_origenes_configurados(monkeypatch):
+    import importlib
+
+    import server.app
+
+    monkeypatch.setenv("RUSTIQ_CORS_ORIGINS", "http://localhost:5173, http://127.0.0.1:5173")
+    try:
+        recargado = importlib.reload(server.app)
+        resp = TestClient(recargado.app).options(
+            "/compile",
+            headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"},
+        )
+        assert resp.status_code == 200
+        assert resp.headers["access-control-allow-origin"] == "http://localhost:5173"
+    finally:
+        monkeypatch.delenv("RUSTIQ_CORS_ORIGINS")
+        importlib.reload(server.app)
 
 
 def test_sirve_la_carpeta_web(client):

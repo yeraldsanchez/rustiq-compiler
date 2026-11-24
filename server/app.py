@@ -101,9 +101,19 @@ app = FastAPI(
     openapi_url="/openapi.json" if DOCS_ENABLED else None,
 )
 
-# Permite abrir el editor desde otro origen (otro puerto o file://) mientras se
-# desarrolla. La API no usa cookies ni credenciales.
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["POST"], allow_headers=["*"])
+# El editor y la API comparten origen, así que en producción CORS no hace falta
+# y sin él ningún otro sitio puede usar el servidor desde el navegador de sus
+# visitantes. Para abrir el editor desde otro origen, poner los orígenes
+# separados por coma en RUSTIQ_CORS_ORIGINS (por ejemplo, http://localhost:5173).
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("RUSTIQ_CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["POST"], allow_headers=["*"]
+    )
 
 
 @app.middleware("http")

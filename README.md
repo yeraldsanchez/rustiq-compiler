@@ -130,6 +130,8 @@ uvicorn server.app:app --reload
 
 La API queda en `POST http://localhost:8000/compile` y el editor en `http://localhost:8000/`. La documentación interactiva (`/docs`) se activa con `RUSTIQ_DOCS=1 uvicorn server.app:app --reload`; sin esa variable no se publica.
 
+El servidor no manda cabeceras CORS: el editor y la API comparten origen, y así ningún otro sitio puede usar el compilador desde el navegador de sus visitantes. Si hace falta abrir el editor desde otro origen, se ponen los orígenes separados por coma en `RUSTIQ_CORS_ORIGINS` (por ejemplo, `RUSTIQ_CORS_ORIGINS=http://localhost:3000`). `npm run dev` no lo necesita, porque Vite reenvía `/compile` y el navegador ve un solo origen.
+
 ### Trabajar en el editor
 
 El editor está en `web/`, escrito en TypeScript con Vite y CodeMirror 6. Lo que sirve FastAPI es `web/dist/`, que ya viene construido en el repo: para usar el editor no hace falta Node. Solo se necesita Node 20 o superior para modificarlo:
