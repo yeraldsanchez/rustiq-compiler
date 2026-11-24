@@ -12,6 +12,7 @@ Qué se soporta, qué no, y en qué se diferencia RustiQ de Rust.
 | T4 | `let` sin inicializador | Válido si el tipo se indica y se asigna antes de usarse. Cuenta como asignada si se le asigna en todas las ramas de un `if` con `else` o de un `match` Reutiliza el estado "sin inicializar" de movimientos |
 | T5 | Bloque anidado como valor final | ANTLR lee `{ { 3 } }` con el bloque interno como sentencia. Si la última sentencia de un bloque es otro bloque que produce valor y no hay otra expresión final, ese bloque es la expresión final (`flow.block_tail`) |
 | T6 | Errores léxicos | El lexer tiene tokens de error en el canal oculto (`BAD_STRING`, `UNTERMINATED_STRING`, `BAD_CHAR`, `UNTERMINATED_CHAR`, `UNTERMINATED_COMMENT`). El parser no los ve y el pipeline los reporta como `E_UNTERMINATED_STRING`, `E_INVALID_ESCAPE`, `E_UNTERMINATED_COMMENT` o `E_INVALID_CHAR`, con la posición exacta |
+| T7 | Anidación máxima | Un programa con más de 256 niveles de `(`, `{` y `[` abiertos a la vez es error `E_TOO_NESTED` y no se parsea. Se cuenta sobre los tokens, así que no cuentan los que están dentro de strings o comentarios. El parser usa predicción SLL: con LL completo, los bloques anidados tardan tiempo superlineal |
 
 ## Soportado
 

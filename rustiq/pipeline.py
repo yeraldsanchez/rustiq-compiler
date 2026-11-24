@@ -27,6 +27,7 @@ from rustiq.errors import (
     E_UNTERMINATED_COMMENT,
     E_UNTERMINATED_STRING,
     E_SYNTAX,
+    E_TOO_NESTED,
     E_WASM_INVALID,
     E_WAT_INVALID,
     LEXICO,
@@ -179,9 +180,40 @@ ERROR_TOKENS = {
     RustiQLexer.UNTERMINATED_COMMENT,
 }
 
+# Niveles máximos de `(`, `{` y `[` abiertos a la vez. El parser tarda más
+# cuanto más anidado está el programa (256 niveles, ~1.6 s en el peor caso), y
+# el servidor es público. Ningún programa escrito a mano se acerca a esto.
+MAX_NESTING = 256
+OPENING_TOKENS = {RustiQLexer.LPAREN, RustiQLexer.LBRACE, RustiQLexer.LBRACK}
+CLOSING_TOKENS = {RustiQLexer.RPAREN, RustiQLexer.RBRACE, RustiQLexer.RBRACK}
+
+
+def _nesting_error(tokens) -> CompileError | None:
+    """Error en el primer delimitador que pasa de MAX_NESTING, o None.
+
+    Cuenta sobre los tokens, así los delimitadores dentro de strings,
+    chars y comentarios no cuentan. Es lineal: corre antes del parser.
+    """
+    depth = 0
+    for token in tokens:
+        if token.type in OPENING_TOKENS:
+            depth += 1
+            if depth > MAX_NESTING:
+                return CompileError(
+                    SINTACTICO, E_TOO_NESTED,
+                    f"El programa anida más de {MAX_NESTING} niveles de paréntesis, llaves o corchetes",
+                    token.line, token.column + 1, 1,
+                )
+        elif token.type in CLOSING_TOKENS and depth > 0:
+            depth -= 1
+    return None
+
 
 def parse_source(source: str):
-    """Devuelve (árbol, errores léxicos y sintácticos ordenados por posición)."""
+    """Devuelve (árbol, errores léxicos y sintácticos ordenados por posición).
+
+    Si el programa pasa de MAX_NESTING no se parsea: el árbol es None.
+    """
     lexer = RustiQLexer(InputStream(source))
     tokens = CommonTokenStream(lexer)
     parser = RustiQParser(tokens)
@@ -198,6 +230,9 @@ def parse_source(source: str):
 
     tokens.fill()
     token_errors = [_error_token(t) for t in tokens.tokens if t.type in ERROR_TOKENS]
+    too_nested = _nesting_error(tokens.tokens)
+    if too_nested is not None:
+        return None, sorted(lex_errors.errors + token_errors + [too_nested], key=lambda e: (e.line, e.column))
     tree = parser.program()
     errors = lex_errors.errors + token_errors + syntax_errors.errors
     return tree, sorted(errors, key=lambda e: (e.line, e.column))
