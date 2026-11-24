@@ -29,7 +29,7 @@ jobs:
   imagen:
     # Construye la imagen de Docker cuando las pruebas pasan. En los PR solo
     # comprueba que el Dockerfile construye; en main además la sube a GHCR
-    # etiquetada con el sha del commit.
+    # etiquetada con el sha del commit y con latest.
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -53,7 +53,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
-          tags: type=sha,format=long,prefix=
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Construir y subir
         uses: docker/build-push-action@v6
