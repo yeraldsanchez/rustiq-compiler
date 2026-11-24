@@ -15,6 +15,7 @@ se regenera con `npm run build` dentro de `web/`. Se levanta con:
 """
 
 import base64
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -89,7 +90,16 @@ class CompileResponse(BaseModel):
     symbols: list[SymbolOut] = []
 
 
-app = FastAPI(title="RustiQ")
+# /docs, /redoc y /openapi.json solo con RUSTIQ_DOCS=1: en el servidor público
+# no hace falta publicar el mapa de la API.
+DOCS_ENABLED = os.environ.get("RUSTIQ_DOCS") == "1"
+
+app = FastAPI(
+    title="RustiQ",
+    docs_url="/docs" if DOCS_ENABLED else None,
+    redoc_url="/redoc" if DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if DOCS_ENABLED else None,
+)
 
 # Permite abrir el editor desde otro origen (otro puerto o file://) mientras se
 # desarrolla. La API no usa cookies ni credenciales.

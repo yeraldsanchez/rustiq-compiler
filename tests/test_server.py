@@ -80,3 +80,8 @@ def test_cabeceras_de_seguridad(client, peticion):
     csp = resp.headers["Content-Security-Policy"]
     assert "'wasm-unsafe-eval'" in csp
     assert "frame-ancestors 'none'" in csp
+
+
+@pytest.mark.parametrize("ruta", ["/docs", "/redoc", "/openapi.json"])
+def test_documentacion_de_la_api_apagada_por_defecto(client, ruta):
+    assert client.get(ruta).status_code == 404
