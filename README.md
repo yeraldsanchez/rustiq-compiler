@@ -1,6 +1,10 @@
 # 🦀 RustiQ
 
+**Español** · [English](README.en.md)
+
 **Escribe Rust. Ejecútalo en el navegador.**
+
+> 👉 **Pruébalo sin instalar nada en [rustiq.yeraldsanchez.dev](https://rustiq.yeraldsanchez.dev).**
 
 RustiQ es un compilador que toma un subconjunto de Rust y lo convierte en **WebAssembly**, con un editor web para escribir, compilar y ejecutar tu código al instante, sin instalar nada.
 
