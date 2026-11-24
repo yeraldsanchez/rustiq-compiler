@@ -3,12 +3,14 @@ services:
     build: .
     image: rustiq
     ports:
-      - "8000:8000"
+      # Solo en 127.0.0.1: Docker abre sus puertos directo en iptables y se
+      # salta ufw, así que con "8000:8000" el puerto quedaría expuesto a la red.
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
     # El servidor es público: el contenedor no puede escribir en su sistema de
     # archivos (wat2wasm usa /tmp, que va en memoria), no puede ganar
     # privilegios y tiene topes de memoria, CPU y procesos para que una
-    # compilación pesada no tumbe la máquina. Ajustar cpus y mem_limit al VPS.
+    # compilación pesada no tumbe la máquina. Ajustar cpus y mem_limit a la máquina.
     read_only: true
     tmpfs:
       - /tmp:size=64m
