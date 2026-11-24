@@ -5,3 +5,17 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    # El servidor es público: el contenedor no puede escribir en su sistema de
+    # archivos (wat2wasm usa /tmp, que va en memoria), no puede ganar
+    # privilegios y tiene topes de memoria, CPU y procesos para que una
+    # compilación pesada no tumbe la máquina. Ajustar cpus y mem_limit al VPS.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128

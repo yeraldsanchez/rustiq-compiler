@@ -82,7 +82,7 @@ def test_error_semantico_detiene_el_pipeline(monkeypatch):
     assert result.errors[0].phase == SEMANTICO
 
 
-def test_bug_del_analizador_es_error_interno(monkeypatch):
+def test_bug_del_analizador_es_error_interno(monkeypatch, caplog):
     def analyze(self, tree):
         raise RuntimeError("boom")
 
@@ -90,7 +90,9 @@ def test_bug_del_analizador_es_error_interno(monkeypatch):
     result = pipeline.compile_source("fn main() {}")
     e = result.errors[0]
     assert (e.phase, e.code) == (SEMANTICO, E_INTERNAL)
-    assert "boom" in e.message
+    # El detalle va al log, no al usuario.
+    assert "boom" not in e.message
+    assert "boom" in caplog.text
 
 
 def test_bug_del_codegen_es_error_interno(monkeypatch):

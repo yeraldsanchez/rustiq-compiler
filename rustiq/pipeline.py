@@ -5,6 +5,7 @@ servidor. Cada fase solo corre si la anterior terminó sin errores, y si hay
 un solo error nunca se devuelve wasm.
 """
 
+import logging
 import shutil
 import subprocess
 import sys
@@ -13,7 +14,7 @@ import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from antlr4 import CommonTokenStream, InputStream
+from antlr4 import CommonTokenStream, InputStream, PredictionMode
 from antlr4.error.ErrorListener import ErrorListener
 from wasmtime import Engine, Module, WasmtimeError
 from wasmtime import wat2wasm as wasmtime_wat2wasm
@@ -27,6 +28,7 @@ from rustiq.errors import (
     E_UNTERMINATED_COMMENT,
     E_UNTERMINATED_STRING,
     E_SYNTAX,
+    E_TOO_NESTED,
     E_WASM_INVALID,
     E_WAT_INVALID,
     LEXICO,
@@ -179,9 +181,40 @@ ERROR_TOKENS = {
     RustiQLexer.UNTERMINATED_COMMENT,
 }
 
+# Niveles máximos de `(`, `{` y `[` abiertos a la vez. El parser tarda más
+# cuanto más anidado está el programa (256 niveles, ~1.6 s en el peor caso), y
+# el servidor es público. Ningún programa escrito a mano se acerca a esto.
+MAX_NESTING = 256
+OPENING_TOKENS = {RustiQLexer.LPAREN, RustiQLexer.LBRACE, RustiQLexer.LBRACK}
+CLOSING_TOKENS = {RustiQLexer.RPAREN, RustiQLexer.RBRACE, RustiQLexer.RBRACK}
+
+
+def _nesting_error(tokens) -> CompileError | None:
+    """Error en el primer delimitador que pasa de MAX_NESTING, o None.
+
+    Cuenta sobre los tokens, así los delimitadores dentro de strings,
+    chars y comentarios no cuentan. Es lineal: corre antes del parser.
+    """
+    depth = 0
+    for token in tokens:
+        if token.type in OPENING_TOKENS:
+            depth += 1
+            if depth > MAX_NESTING:
+                return CompileError(
+                    SINTACTICO, E_TOO_NESTED,
+                    f"El programa anida más de {MAX_NESTING} niveles de paréntesis, llaves o corchetes",
+                    token.line, token.column + 1, 1,
+                )
+        elif token.type in CLOSING_TOKENS and depth > 0:
+            depth -= 1
+    return None
+
 
 def parse_source(source: str):
-    """Devuelve (árbol, errores léxicos y sintácticos ordenados por posición)."""
+    """Devuelve (árbol, errores léxicos y sintácticos ordenados por posición).
+
+    Si el programa pasa de MAX_NESTING no se parsea: el árbol es None.
+    """
     lexer = RustiQLexer(InputStream(source))
     tokens = CommonTokenStream(lexer)
     parser = RustiQParser(tokens)
@@ -191,8 +224,16 @@ def parse_source(source: str):
         recognizer.removeErrorListeners()
         recognizer.addErrorListener(listener)
 
+    # SLL en vez del LL completo: con LL, los bloques sueltos anidados
+    # (`{ { ... } }`) cuestan tiempo superlineal (300 niveles, ~45 s); con SLL,
+    # ~1 s. La gramática no necesita contexto completo para decidir.
+    parser._interp.predictionMode = PredictionMode.SLL
+
     tokens.fill()
     token_errors = [_error_token(t) for t in tokens.tokens if t.type in ERROR_TOKENS]
+    too_nested = _nesting_error(tokens.tokens)
+    if too_nested is not None:
+        return None, sorted(lex_errors.errors + token_errors + [too_nested], key=lambda e: (e.line, e.column))
     tree = parser.program()
     errors = lex_errors.errors + token_errors + syntax_errors.errors
     return tree, sorted(errors, key=lambda e: (e.line, e.column))
@@ -252,9 +293,16 @@ def assemble(wat: str) -> bytes:
 # --- Pipeline --------------------------------------------------------------
 
 
+logger = logging.getLogger(__name__)
+
+# Lo que ve quien usa el editor. El detalle (excepción y traza) va al log del
+# servidor: no le sirve al usuario y expone cómo está hecho el compilador.
+INTERNAL_ERROR_MESSAGE = "Error interno del compilador. El programa no se pudo compilar."
+
+
 def _internal_error(phase: str, exc: Exception) -> CompileError:
-    message = f"Error interno del compilador: {type(exc).__name__}: {exc}"
-    return CompileError(phase, E_INTERNAL, message, BACKEND_LINE, BACKEND_COLUMN)
+    logger.error("Error interno en la fase %s", phase, exc_info=exc)
+    return CompileError(phase, E_INTERNAL, INTERNAL_ERROR_MESSAGE, BACKEND_LINE, BACKEND_COLUMN)
 
 
 def _failure(errors: list[CompileError], symbols: list[SymbolHint] | None = None) -> CompileResult:

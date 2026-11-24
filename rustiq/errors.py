@@ -23,6 +23,7 @@ E_INVALID_ESCAPE = "E_INVALID_ESCAPE"
 
 # Sintáctico
 E_SYNTAX = "E_SYNTAX"
+E_TOO_NESTED = "E_TOO_NESTED"
 
 # Semántico: ámbitos y declaraciones
 E_UNDECLARED = "E_UNDECLARED"

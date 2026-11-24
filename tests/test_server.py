@@ -59,7 +59,9 @@ def test_cors_permite_otro_origen(client):
 
 
 def test_sirve_la_carpeta_web(client):
-    assert client.get("/hola.html").status_code == 200
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "<title>RustiQ</title>" in resp.text
 
 
 def test_devuelve_simbolos(client):
@@ -67,3 +69,21 @@ def test_devuelve_simbolos(client):
     simbolos = resp.json()["symbols"]
     assert {"name": "x", "kind": "local", "type": "i32"}.items() <= simbolos[1].items()
     assert simbolos[1]["line"] == 2 and simbolos[1]["column"] == 9
+
+
+@pytest.mark.parametrize("peticion", [
+    lambda c: c.post("/compile", json={"source": PROGRAMA_MINIMO}),
+    lambda c: c.get("/"),
+])
+def test_cabeceras_de_seguridad(client, peticion):
+    resp = peticion(client)
+    assert resp.headers["X-Content-Type-Options"] == "nosniff"
+    assert resp.headers["X-Frame-Options"] == "DENY"
+    csp = resp.headers["Content-Security-Policy"]
+    assert "'wasm-unsafe-eval'" in csp
+    assert "frame-ancestors 'none'" in csp
+
+
+@pytest.mark.parametrize("ruta", ["/docs", "/redoc", "/openapi.json"])
+def test_documentacion_de_la_api_apagada_por_defecto(client, ruta):
+    assert client.get(ruta).status_code == 404

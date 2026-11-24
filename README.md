@@ -128,7 +128,7 @@ Compila todos los programas de `tests/valid` y `tests/invalid` y escribe `eviden
 uvicorn server.app:app --reload
 ```
 
-La API queda en `POST http://localhost:8000/compile` y el editor en `http://localhost:8000/`. La documentación interactiva está en `/docs`.
+La API queda en `POST http://localhost:8000/compile` y el editor en `http://localhost:8000/`. La documentación interactiva (`/docs`) se activa con `RUSTIQ_DOCS=1 uvicorn server.app:app --reload`; sin esa variable no se publica.
 
 ### Trabajar en el editor
 
