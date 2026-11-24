@@ -1,7 +1,7 @@
 /** Punto de entrada: conecta el editor, el compilador remoto, la ejecución
  *  y los paneles. Cada pieza vive en su módulo; aquí solo se coordinan. */
 
-import { compileSource, ConnectionError, decodeBase64 } from "./api";
+import { CompileCancelledError, compileSource, ConnectionError, decodeBase64, ServerBusyError } from "./api";
 import { dom } from "./dom";
 import { createEditor } from "./editor/editor";
 import type { Reference } from "./editor/navigation";
@@ -120,8 +120,16 @@ async function compile({ quiet = false } = {}): Promise<CompileResponse | null> 
     showCompileResult(result, performance.now() - started, file.id, file.name);
     return result;
   } catch (error) {
+    if (error instanceof CompileCancelledError) return null;
     if (!(error instanceof ConnectionError)) throw error;
     if (request !== latestRequest) return null;
+    if (error instanceof ServerBusyError) {
+      // En vivo no se muestra nada: la siguiente edición vuelve a intentar.
+      if (quiet) return null;
+      showBanner(error.message, () => void compile());
+      setState("Servidor ocupado", "warn");
+      return null;
+    }
     showBanner(error.message, () => void compile());
     setState("Sin conexión", "error");
     return null;
