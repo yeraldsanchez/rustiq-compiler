@@ -25,7 +25,8 @@ from pydantic import BaseModel, Field
 from rustiq.pipeline import compile_source
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web" / "dist"
-MAX_SOURCE_CHARS = 100_000
+# Un programa de clase cabe sobrado: el más largo de las pruebas tiene ~1 600.
+MAX_SOURCE_CHARS = 20_000
 
 # Cabeceras de seguridad para todas las respuestas (editor y API).
 # - 'wasm-unsafe-eval': el worker instancia el módulo compilado.

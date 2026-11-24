@@ -38,7 +38,8 @@ import { initWelcome, showWelcome } from "./ui/welcome";
 
 const DEFAULT_EXAMPLE = "hola_mundo.rq";
 const EMPTY_PROGRAM = "fn main() {\n}\n";
-const MAX_OPEN_BYTES = 100_000;
+// Igual al límite del servidor (MAX_SOURCE_CHARS en server/app.py).
+const MAX_OPEN_BYTES = 20_000;
 const OUTLINE_REFRESH_MS = 250;
 
 const runner = new Runner();
