@@ -5,6 +5,7 @@ servidor. Cada fase solo corre si la anterior terminó sin errores, y si hay
 un solo error nunca se devuelve wasm.
 """
 
+import logging
 import shutil
 import subprocess
 import sys
@@ -292,9 +293,16 @@ def assemble(wat: str) -> bytes:
 # --- Pipeline --------------------------------------------------------------
 
 
+logger = logging.getLogger(__name__)
+
+# Lo que ve quien usa el editor. El detalle (excepción y traza) va al log del
+# servidor: no le sirve al usuario y expone cómo está hecho el compilador.
+INTERNAL_ERROR_MESSAGE = "Error interno del compilador. El programa no se pudo compilar."
+
+
 def _internal_error(phase: str, exc: Exception) -> CompileError:
-    message = f"Error interno del compilador: {type(exc).__name__}: {exc}"
-    return CompileError(phase, E_INTERNAL, message, BACKEND_LINE, BACKEND_COLUMN)
+    logger.error("Error interno en la fase %s", phase, exc_info=exc)
+    return CompileError(phase, E_INTERNAL, INTERNAL_ERROR_MESSAGE, BACKEND_LINE, BACKEND_COLUMN)
 
 
 def _failure(errors: list[CompileError], symbols: list[SymbolHint] | None = None) -> CompileResult:
