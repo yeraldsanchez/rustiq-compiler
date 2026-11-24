@@ -2,12 +2,14 @@ import type { CompileResponse } from "./types";
 
 const COMPILE_URL = "/compile";
 const HTTP_TOO_LARGE = 422;
+const HTTP_TOO_MANY = 429;
 const HTTP_BUSY = 503;
 
 /** El servidor no respondió o respondió algo que no es una compilación. */
 export class ConnectionError extends Error {}
 
-/** El servidor está ocupado (503): conviene reintentar en unos segundos. */
+/** El servidor está ocupado (503) o esta IP pasó el rate limit del proxy
+ *  (429): conviene reintentar en unos segundos. */
 export class ServerBusyError extends ConnectionError {}
 
 /** Una compilación más nueva reemplazó a esta antes de que respondiera. */
@@ -45,6 +47,9 @@ async function request(source: string, signal: AbortSignal): Promise<CompileResp
   }
   if (response.status === HTTP_TOO_LARGE) {
     throw new ConnectionError("El servidor rechazó el programa: es demasiado largo.");
+  }
+  if (response.status === HTTP_TOO_MANY) {
+    throw new ServerBusyError("Demasiadas compilaciones seguidas, espera unos segundos.");
   }
   if (response.status === HTTP_BUSY) {
     throw new ServerBusyError("El servidor está ocupado, intenta de nuevo en unos segundos.");
